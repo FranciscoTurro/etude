@@ -1,8 +1,37 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { Exercise, ExerciseInput } from '../shared/exercise'
+import type { Day, DayInput } from '../shared/day'
+import type { Weekday, WeekScheduleEntry } from '../shared/week'
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  exercises: {
+    list: (): Promise<Exercise[]> => ipcRenderer.invoke('exercises:list'),
+    create: (input: ExerciseInput): Promise<Exercise> =>
+      ipcRenderer.invoke('exercises:create', input),
+    update: (id: number, input: ExerciseInput): Promise<Exercise> =>
+      ipcRenderer.invoke('exercises:update', id, input),
+    duplicate: (id: number): Promise<Exercise> => ipcRenderer.invoke('exercises:duplicate', id),
+    daysUsing: (id: number): Promise<string[]> => ipcRenderer.invoke('exercises:daysUsing', id),
+    delete: (id: number): Promise<void> => ipcRenderer.invoke('exercises:delete', id)
+  },
+  days: {
+    list: (): Promise<Day[]> => ipcRenderer.invoke('days:list'),
+    /** Omit id to create. Resolves to the day's id. */
+    save: (id: number | undefined, input: DayInput): Promise<number> =>
+      ipcRenderer.invoke('days:save', id, input),
+    delete: (id: number): Promise<void> => ipcRenderer.invoke('days:delete', id)
+  },
+  week: {
+    get: (): Promise<WeekScheduleEntry[]> => ipcRenderer.invoke('week:get'),
+    /** dayId null = rest day */
+    set: (weekday: Weekday, dayId: number | null): Promise<void> =>
+      ipcRenderer.invoke('week:set', weekday, dayId)
+  }
+}
+
+export type Api = typeof api
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
