@@ -39,7 +39,7 @@ export function WeekPanel({ week, days, onChanged }: Props): React.JSX.Element {
         )}
       </header>
 
-      <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
+      <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
         {week?.map(({ weekday, dayId }) => {
           const day = dayId === null ? undefined : byId.get(dayId)
           const isToday = weekday === today
@@ -67,6 +67,7 @@ export function WeekPanel({ week, days, onChanged }: Props): React.JSX.Element {
                   size="sm"
                   className="w-full min-w-0"
                   aria-label={`Day for ${WEEKDAY_LABELS[weekday]}`}
+                  title={day?.name ?? 'Rest'}
                 >
                   <SelectValue className="truncate" />
                 </SelectTrigger>

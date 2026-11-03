@@ -237,7 +237,7 @@ export function PracticeScreen({ days, week, settings, visible, onGoToLibrary, o
   const totalSeconds = day?.slots.reduce((sum, s, i) => sum + choiceFor(i, s).allocatedSeconds, 0) ?? 0
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
+    <div className="flex w-full flex-col gap-6 p-6 xl:gap-8 xl:px-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl font-semibold tracking-tight">
@@ -286,7 +286,7 @@ export function PracticeScreen({ days, week, settings, visible, onGoToLibrary, o
       <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* Timer side */}
         <div className="flex flex-col gap-4">
-          <div className="flex min-h-96 flex-col items-center justify-center gap-5 rounded-2xl border p-8 text-center">
+          <div className="flex min-h-96 flex-col items-center justify-center gap-5 rounded-2xl border p-8 text-center xl:min-h-[32rem]">
             {phase === 'done' && day ? (
               <>
                 <CheckIcon className="size-12 text-primary" />
@@ -335,7 +335,7 @@ export function PracticeScreen({ days, week, settings, visible, onGoToLibrary, o
 
                 <div
                   className={cn(
-                    'font-heading text-7xl font-semibold tabular-nums transition-colors',
+                    'font-heading text-7xl font-semibold tabular-nums transition-colors xl:text-9xl',
                     phase === 'running' && clockState === 'waiting' && 'text-muted-foreground'
                   )}
                   aria-label="Time remaining"
@@ -355,7 +355,7 @@ export function PracticeScreen({ days, week, settings, visible, onGoToLibrary, o
                 {phase === 'queued' && (
                   <Button
                     onClick={play}
-                    className="size-24 rounded-full [&_svg:not([class*='size-'])]:size-10"
+                    className="size-24 rounded-full xl:size-32 [&_svg:not([class*='size-'])]:size-10 xl:[&_svg:not([class*='size-'])]:size-14"
                     aria-label="Play"
                   >
                     <PlayIcon className="translate-x-0.5" />

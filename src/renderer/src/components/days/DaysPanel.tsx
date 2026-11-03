@@ -80,7 +80,7 @@ export function DaysPanel({ days, week, exercises, onChanged }: Props): React.JS
         </div>
       )}
 
-      <ul className="flex flex-col gap-3">
+      <ul className="grid items-start gap-3 2xl:grid-cols-2">
         {days?.map((day) => (
           <li key={day.id}>
             <Card>

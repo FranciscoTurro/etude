@@ -36,7 +36,7 @@ interface Props {
 export function DayEditorDialog({ open, day, exercises, onOpenChange, onSaved }: Props): React.JSX.Element {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
         <DialogHeader>
           <DialogTitle>{day ? 'Edit day' : 'New day'}</DialogTitle>
           <DialogDescription>
@@ -156,7 +156,7 @@ function DayEditor({
         {/* Library */}
         <div className="flex min-h-0 flex-col gap-2">
           <Label>Exercises</Label>
-          <ul className="flex max-h-[50vh] flex-col gap-1 overflow-y-auto rounded-lg border p-1.5">
+          <ul className="flex max-h-[60vh] flex-col gap-1 overflow-y-auto rounded-lg border p-1.5">
             {exercises.map((ex) => (
               <li
                 key={ex.id}
@@ -192,7 +192,7 @@ function DayEditor({
               Total {formatDuration(totalSeconds)}
             </span>
           </div>
-          <div className="flex max-h-[50vh] min-h-40 flex-col overflow-y-auto rounded-lg border p-1.5">
+          <div className="flex max-h-[60vh] min-h-40 flex-col overflow-y-auto rounded-lg border p-1.5">
             {slots.length === 0 ? (
               <div
                 {...gap(0)}

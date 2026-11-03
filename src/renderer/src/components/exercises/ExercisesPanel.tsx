@@ -58,7 +58,7 @@ export function ExercisesPanel({ exercises, onChanged }: Props): React.JSX.Eleme
         </div>
       )}
 
-      <ul className="flex flex-col gap-3">
+      <ul className="grid items-start gap-3 2xl:grid-cols-2">
         {exercises?.map((exercise) => (
           <li key={exercise.id}>
             <Card>

@@ -68,7 +68,7 @@ function App(): React.JSX.Element {
       </main>
 
       <main className={cn(tab !== 'library' && 'hidden')}>
-        <div className="mx-auto grid w-full max-w-5xl items-start gap-8 p-6 md:grid-cols-2">
+        <div className="grid w-full items-start gap-8 p-6 md:grid-cols-2 xl:gap-10 xl:px-10">
           <WeekPanel week={week} days={days ?? []} onChanged={refresh} />
           <ExercisesPanel exercises={exercises} onChanged={refresh} />
           <DaysPanel days={days} week={week ?? []} exercises={exercises ?? []} onChanged={refresh} />
