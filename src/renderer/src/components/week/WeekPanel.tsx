@@ -1,5 +1,11 @@
 import { cn } from 'cn'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { formatDuration } from '../../../../shared/exercise'
 import type { Day } from '../../../../shared/day'
 import {
@@ -47,15 +53,15 @@ export function WeekPanel({ week, days, onChanged }: Props): React.JSX.Element {
             <li
               key={weekday}
               className={cn(
-                'flex min-w-0 flex-col gap-2 rounded-xl border p-2.5',
-                isToday && 'border-primary bg-primary/5'
+                'surface flex min-w-0 flex-col gap-2 p-3',
+                isToday && 'ring-2 ring-signal'
               )}
             >
               <div className="flex items-baseline justify-between gap-1">
                 <span className="text-sm font-medium" title={WEEKDAY_LABELS[weekday]}>
                   {WEEKDAY_LABELS[weekday].slice(0, 3)}
                 </span>
-                {isToday && <span className="text-xs text-primary">Today</span>}
+                {isToday && <span className="text-xs font-medium text-signal">Today</span>}
               </div>
               <Select
                 items={items}
@@ -79,7 +85,7 @@ export function WeekPanel({ week, days, onChanged }: Props): React.JSX.Element {
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-xs text-muted-foreground tabular-nums">
+              <span className={cn('text-xs text-muted-foreground', day && 'font-mono')}>
                 {day ? formatDuration(day.totalSeconds) : 'Rest day'}
               </span>
             </li>

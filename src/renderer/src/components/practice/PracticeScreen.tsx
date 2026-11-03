@@ -362,7 +362,6 @@ export function PracticeScreen({
     )
   }
 
-  const name = settings?.[SETTING.userName]
   // Counts down for exercises, up for songs.
   const clockSeconds =
     allocatedMs === null
@@ -385,87 +384,92 @@ export function PracticeScreen({
       0
     ) ?? 0) - (untimed ? 0 : Math.floor(elapsedMs / 1000))
 
-  return (
-    <div className="flex w-full flex-col gap-6 p-6 md:h-full xl:gap-8 xl:px-10">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">
-            Hello{name ? ` ${name}` : ''}, today is {WEEKDAY_LABELS[today]},
-          </h1>
-          <p className="text-muted-foreground">
-            {scheduledDay ? (
-              <>
-                so you have <span className="font-medium text-foreground">{scheduledDay.name}</span>
-              </>
-            ) : (
-              "so it's a rest day. You can still pick a day to practice."
-            )}
-          </p>
-        </div>
-        {run && phase !== 'done' ? (
-          <Button variant="outline" onClick={() => setConfirmEnd(true)}>
-            <SquareIcon /> End session
-          </Button>
-        ) : (
-          !run && (
-            <Select
-              items={dayItems}
-              value={selectedId === null ? NO_DAY : String(selectedId)}
-              onValueChange={(v) => {
-                setChosenId(v === NO_DAY || v === null ? null : Number(v))
-                setPickedId(null)
-                setBpmText(null)
-              }}
-            >
-              <SelectTrigger className="w-48" aria-label="Day to practice">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {dayItems.map((i) => (
-                  <SelectItem key={i.value} value={i.value}>
-                    {i.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )
-        )}
-      </header>
+  const active = phase !== 'done' && !!day && !!slot && !!picked
+  const status =
+    phase !== 'running'
+      ? null
+      : paused
+        ? { text: 'Paused · Space to resume', live: false }
+        : clockState === 'playing'
+          ? { text: 'Playing', live: true }
+          : clockState === 'holding'
+            ? { text: `Quiet… stopping in ${holdLeft}s`, live: true }
+            : { text: 'Waiting for sound', live: false }
 
-      <div className="grid items-start gap-6 md:min-h-0 md:flex-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-stretch">
+  return (
+    <div className="flex w-full flex-col px-6 pb-6 md:h-full xl:px-10">
+      <div className="grid items-start gap-6 md:min-h-0 md:flex-1 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] md:items-stretch">
         {/* Timer side */}
         <div className="flex flex-col gap-4 md:min-h-0 md:overflow-y-auto">
-          <div className="flex min-h-96 flex-col items-center justify-center gap-5 rounded-2xl border p-8 text-center xl:min-h-[32rem]">
-            {phase === 'done' && day ? (
-              <>
-                <CheckIcon className="size-12 text-primary" />
-                <div>
-                  <h2 className="font-heading text-2xl font-semibold">Session complete</h2>
-                  <p className="text-muted-foreground">
-                    {Object.values(results).filter((r) => r.status === 'completed').length}{' '}
-                    completed, {Object.values(results).filter((r) => r.status === 'skipped').length}{' '}
-                    skipped
-                  </p>
-                </div>
-                <Button size="lg" onClick={endSession}>
-                  Practice again
-                </Button>
-              </>
-            ) : !day ? (
-              <p className="text-muted-foreground">
-                Rest day. Pick a day above to practice anyway.
+          <section className="surface flex min-h-[34rem] flex-col p-7 md:flex-1 xl:px-11 xl:py-9">
+            <header className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                {WEEKDAY_LABELS[today]} –{' '}
+                <span className="font-semibold text-foreground">
+                  {scheduledDay ? scheduledDay.name : 'Rest day'}
+                </span>
               </p>
-            ) : !slot || !picked ? (
-              <p className="text-muted-foreground">{day.name} has no exercises yet.</p>
-            ) : (
-              <>
-                <div className="flex flex-col items-center gap-2">
-                  <span className="text-xs tracking-wide text-muted-foreground uppercase">
-                    {index + 1} of {day.slots.length}
+              {run && phase !== 'done' ? (
+                <Button variant="secondary" size="sm" onClick={() => setConfirmEnd(true)}>
+                  <SquareIcon /> End session
+                </Button>
+              ) : (
+                !run && (
+                  <Select
+                    items={dayItems}
+                    value={selectedId === null ? NO_DAY : String(selectedId)}
+                    onValueChange={(v) => {
+                      setChosenId(v === NO_DAY || v === null ? null : Number(v))
+                      setPickedId(null)
+                      setBpmText(null)
+                    }}
+                  >
+                    <SelectTrigger className="w-52" aria-label="Day to practice">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dayItems.map((i) => (
+                        <SelectItem key={i.value} value={i.value}>
+                          {i.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )
+              )}
+            </header>
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8 text-center">
+              {phase === 'done' && day ? (
+                <>
+                  <CheckIcon className="size-12 text-signal" />
+                  <div>
+                    <h2 className="text-3xl font-semibold">Session complete</h2>
+                    <p className="text-muted-foreground">
+                      {Object.values(results).filter((r) => r.status === 'completed').length}{' '}
+                      completed,{' '}
+                      {Object.values(results).filter((r) => r.status === 'skipped').length} skipped
+                    </p>
+                  </div>
+                  <Button size="lg" onClick={endSession}>
+                    Practice again
+                  </Button>
+                </>
+              ) : !day ? (
+                <p className="text-lg text-muted-foreground">
+                  Rest day. Pick a day above to practice anyway.
+                </p>
+              ) : !slot || !picked ? (
+                <p className="text-lg text-muted-foreground">{day.name} has no exercises yet.</p>
+              ) : (
+                <>
+                  <span className="font-mono text-sm text-muted-foreground">
+                    {String(index + 1).padStart(2, '0')} /{' '}
+                    {String(day.slots.length).padStart(2, '0')}
                   </span>
                   {slot.exercises.length > 1 && phase === 'queued' ? (
                     <div
-                      className="flex flex-wrap justify-center gap-1.5"
+                      className="flex flex-wrap justify-center gap-2"
                       role="radiogroup"
                       aria-label="Pick an alternative"
                     >
@@ -474,98 +478,112 @@ export function PracticeScreen({
                           key={e.id}
                           role="radio"
                           aria-checked={e.id === picked.id}
-                          variant={e.id === picked.id ? 'default' : 'outline'}
+                          variant={e.id === picked.id ? 'default' : 'secondary'}
+                          size="lg"
                           onClick={() => {
                             setPickedId(e.id)
                             setBpmText(null)
                           }}
                         >
+                          {slot.song && <MusicIcon />}
                           {e.name}
                         </Button>
                       ))}
                     </div>
                   ) : (
-                    <h2 className="font-heading text-2xl font-semibold">{picked.name}</h2>
+                    <h2 className="flex items-center gap-3 text-4xl font-semibold tracking-tight">
+                      {slot.song && <MusicIcon className="size-7 text-signal" aria-label="Song" />}
+                      {picked.name}
+                    </h2>
                   )}
-                </div>
 
-                <div
-                  className={cn(
-                    'font-heading text-7xl font-semibold tabular-nums transition-colors xl:text-9xl',
-                    phase === 'running' &&
-                      (paused || clockState === 'waiting') &&
-                      'text-muted-foreground'
-                  )}
-                  aria-label={untimed ? 'Time played' : 'Time remaining'}
-                >
-                  {formatDuration(clockSeconds)}
-                </div>
+                  <div
+                    className={cn(
+                      'font-mono text-[7.5rem] leading-none font-medium tracking-tighter tabular-nums transition-colors xl:text-[11rem]',
+                      phase === 'running' &&
+                        (paused || clockState === 'waiting') &&
+                        'text-muted-foreground'
+                    )}
+                    aria-label={untimed ? 'Time played' : 'Time remaining'}
+                  >
+                    {formatDuration(clockSeconds)}
+                  </div>
 
-                <p className="h-5 text-sm text-muted-foreground" aria-live="polite">
-                  {phase === 'running' &&
-                    (paused
-                      ? 'Paused. Press Space to resume'
-                      : clockState === 'playing'
-                        ? 'Playing'
-                        : clockState === 'holding'
-                          ? `Quiet… stopping in ${holdLeft}s`
-                          : 'Waiting for sound')}
-                </p>
+                  <p
+                    className={cn(
+                      'flex h-6 items-center gap-2.5 text-[15px] font-semibold',
+                      status?.live ? 'text-signal' : 'text-muted-foreground'
+                    )}
+                    aria-live="polite"
+                  >
+                    {status && (
+                      <span
+                        className={cn(
+                          'size-2.5 rounded-full',
+                          status.live ? 'bg-signal' : 'border-2 border-muted-foreground/60'
+                        )}
+                      />
+                    )}
+                    {status?.text ?? (phase === 'queued' ? 'Press Space to start' : '')}
+                  </p>
+                </>
+              )}
+            </div>
 
-                <Button
+            {active && picked && (
+              <footer className="flex flex-wrap items-center gap-4">
+                <button
+                  type="button"
                   onClick={phase === 'queued' ? play : () => setPaused((p) => !p)}
-                  variant={phase === 'running' && !paused ? 'outline' : 'default'}
-                  className="size-24 rounded-full xl:size-32 [&_svg:not([class*='size-'])]:size-10 xl:[&_svg:not([class*='size-'])]:size-14"
+                  className="flex size-20 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform focus-visible:ring-4 focus-visible:ring-ring/50 focus-visible:outline-none active:scale-95 xl:size-24 [&_svg]:size-8 xl:[&_svg]:size-9"
                   aria-label={phase === 'queued' ? 'Play' : paused ? 'Resume' : 'Pause'}
                   title="Space"
                 >
                   {phase === 'running' && !paused ? (
-                    <PauseIcon />
+                    <PauseIcon fill="currentColor" strokeWidth={0} />
                   ) : (
-                    <PlayIcon className="translate-x-0.5" />
+                    <PlayIcon className="translate-x-0.5" fill="currentColor" strokeWidth={0} />
                   )}
+                </button>
+                {untimed && phase === 'running' && (
+                  <Button size="lg" onClick={() => logAndAdvance('completed')}>
+                    <CheckIcon /> Done
+                  </Button>
+                )}
+                <Button variant="secondary" size="lg" onClick={() => logAndAdvance('skipped')}>
+                  <SkipForwardIcon /> Skip
                 </Button>
 
-                <div className="flex items-center gap-3">
-                  {metronomeEnabled ? null : picked.bpm !== null ? (
+                <div className="ml-auto">
+                  {metronomeEnabled ? (
+                    <MetronomePanel
+                      bpmText={metronomeText}
+                      onBpmTextChange={changeMetronomeBpm}
+                      fromExercise={metronomeFromExercise}
+                      running={metronomeOn}
+                      onToggle={() => setMetronomeOn((on) => !on)}
+                      beat={beat}
+                    />
+                  ) : picked.bpm !== null ? (
                     <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                      BPM
                       <Input
                         type="number"
                         min={1}
                         max={400}
                         value={bpmValue}
                         onChange={(e) => setBpmText(e.target.value)}
-                        className="h-8 w-20"
+                        className="h-10 w-24 text-center font-mono text-lg"
                         aria-label="BPM for this session"
                       />
+                      BPM
                     </label>
                   ) : (
                     <span className="text-sm text-muted-foreground">No BPM</span>
                   )}
-                  {untimed && phase === 'running' && (
-                    <Button onClick={() => logAndAdvance('completed')}>
-                      <CheckIcon /> Done
-                    </Button>
-                  )}
-                  <Button variant="ghost" onClick={() => logAndAdvance('skipped')}>
-                    <SkipForwardIcon /> Skip
-                  </Button>
                 </div>
-              </>
+              </footer>
             )}
-          </div>
-
-          {metronomeEnabled && picked && phase !== 'done' && (
-            <MetronomePanel
-              bpmText={metronomeText}
-              onBpmTextChange={changeMetronomeBpm}
-              fromExercise={metronomeFromExercise}
-              running={metronomeOn}
-              onToggle={() => setMetronomeOn((on) => !on)}
-              beat={beat}
-            />
-          )}
+          </section>
 
           <AudioPanel
             channelDbs={audio.channelDbs}
@@ -582,11 +600,11 @@ export function PracticeScreen({
 
         {/* Exercise list (~70%) + current exercise's observations (~30%) */}
         {day && (
-          <div className="flex flex-col gap-4 md:min-h-0">
-            <div className="flex flex-col gap-3 rounded-2xl border p-5 md:min-h-0 md:flex-1">
-              <div className="flex items-baseline justify-between">
-                <h2 className="font-heading text-lg font-semibold">{day.name}</h2>
-                <span className="text-sm text-muted-foreground tabular-nums">
+          <div className="flex flex-col gap-5 md:min-h-0">
+            <section className="surface flex flex-col gap-3 p-6 md:min-h-0 md:flex-1">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="truncate text-xl font-semibold">{day.name}</h2>
+                <span className="shrink-0 font-mono text-[13px] text-muted-foreground">
                   {run && phase !== 'done' && (
                     <>
                       <span className="text-foreground">
@@ -599,7 +617,7 @@ export function PracticeScreen({
                   {hasSongs && ' + songs'}
                 </span>
               </div>
-              <ol className="flex flex-col gap-1 md:min-h-0 md:overflow-y-auto">
+              <ol className="flex flex-col gap-0.5 md:min-h-0 md:overflow-y-auto">
                 {day.slots.map((s, i) => {
                   const result = results[i]
                   const current = phase !== 'done' && i === index
@@ -609,20 +627,20 @@ export function PracticeScreen({
                       key={i}
                       ref={current ? currentRowRef : undefined}
                       className={cn(
-                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm',
-                        current && 'bg-primary/10',
+                        'flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px]',
+                        current && 'bg-background font-semibold',
                         result && 'text-muted-foreground'
                       )}
                     >
-                      <span className="flex w-5 shrink-0 justify-center tabular-nums">
+                      <span className="flex w-6 shrink-0 justify-center font-mono text-[13px]">
                         {result?.status === 'completed' ? (
-                          <CheckIcon className="size-4 text-primary" aria-label="Completed" />
+                          <CheckIcon className="size-4 text-signal" aria-label="Completed" />
                         ) : result?.status === 'skipped' ? (
                           <SkipForwardIcon className="size-4" aria-label="Skipped" />
-                        ) : current ? (
-                          <PlayIcon className="size-3.5 text-primary" />
                         ) : (
-                          <span className="text-muted-foreground">{i + 1}</span>
+                          <span className={current ? 'text-signal' : 'text-muted-foreground'}>
+                            {i + 1}
+                          </span>
                         )}
                       </span>
                       <span
@@ -632,8 +650,8 @@ export function PracticeScreen({
                         )}
                       >
                         {s.song && (
-                          <span className="inline-flex items-center gap-1.5">
-                            <MusicIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                          <span className="inline-flex items-center gap-2">
+                            <MusicIcon className="size-4 shrink-0 text-signal" aria-label="Song" />
                             {chosen.name}
                           </span>
                         )}
@@ -644,7 +662,8 @@ export function PracticeScreen({
                               <span
                                 className={cn(
                                   s.exercises.length > 1 &&
-                                    (e.id === chosen.id ? 'font-medium' : 'text-muted-foreground')
+                                    e.id !== chosen.id &&
+                                    'font-normal text-muted-foreground'
                                 )}
                               >
                                 {e.name}
@@ -652,39 +671,36 @@ export function PracticeScreen({
                             </span>
                           ))}
                       </span>
-                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                      <span className="shrink-0 font-mono text-[13px] font-normal text-muted-foreground">
                         {formatMaybeDuration(chosen.allocatedSeconds)}
                       </span>
                     </li>
                   )
                 })}
               </ol>
-            </div>
+            </section>
 
-            <div className="flex flex-col gap-2 rounded-2xl border p-5 md:min-h-0 md:shrink-0 md:basis-[30%]">
+            <section className="flex flex-col gap-2 rounded-[calc(var(--radius)*2)] bg-primary p-6 text-primary-foreground md:min-h-0 md:shrink-0 md:basis-[30%] dark:bg-card dark:text-card-foreground dark:shadow-paper">
               <div className="flex items-baseline justify-between gap-3">
-                <h2 className="font-heading text-lg font-semibold">Observations</h2>
+                <h2 className="text-sm font-medium opacity-70">Observations</h2>
                 {picked && (
-                  <span
-                    className="min-w-0 truncate text-sm text-muted-foreground"
-                    title={picked.name}
-                  >
+                  <span className="min-w-0 truncate text-sm opacity-70" title={picked.name}>
                     {picked.name}
                   </span>
                 )}
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto text-base leading-relaxed whitespace-pre-wrap xl:text-lg">
+              <div className="min-h-0 flex-1 overflow-y-auto text-lg leading-relaxed whitespace-pre-wrap xl:text-xl">
                 {!picked ? (
-                  <span className="text-muted-foreground">
+                  <span className="opacity-70">
                     {phase === 'done' ? 'Session complete.' : 'No exercise selected.'}
                   </span>
                 ) : picked.description ? (
                   picked.description
                 ) : (
-                  <span className="text-muted-foreground">No observations for this exercise.</span>
+                  <span className="opacity-70">No observations for this exercise.</span>
                 )}
               </div>
-            </div>
+            </section>
           </div>
         )}
       </div>

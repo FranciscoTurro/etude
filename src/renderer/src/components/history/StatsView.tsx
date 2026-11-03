@@ -71,7 +71,7 @@ export function StatsView({ visible }: { visible: boolean }): React.JSX.Element 
         <Fact
           label="Current streak"
           value={plural(stats.currentStreak, 'day')}
-          icon={stats.currentStreak > 1 ? <FlameIcon className="size-4 text-primary" /> : null}
+          icon={stats.currentStreak > 1 ? <FlameIcon className="size-4 text-signal" /> : null}
           note={stats.currentStreak === 0 ? 'Practice today to start one' : sinceNote}
         />
         <Fact
@@ -215,7 +215,7 @@ function Card({
   children: React.ReactNode
 }): React.JSX.Element {
   return (
-    <section className="flex flex-col gap-3 rounded-xl border p-5">
+    <section className="surface flex flex-col gap-3 p-6">
       <header>
         <h3 className="font-heading font-semibold">{title}</h3>
         {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
@@ -239,7 +239,7 @@ function PeriodCard({
   note?: string
 }): React.JSX.Element {
   return (
-    <div className="flex flex-col gap-1 rounded-xl border p-4">
+    <div className="surface flex flex-col gap-1 p-5">
       <span className="text-xs text-muted-foreground">{title}</span>
       <span className="font-heading text-3xl font-semibold tabular-nums">
         {formatHours(t.practiceSeconds)}
@@ -266,7 +266,7 @@ function Fact({
   icon?: React.ReactNode
 }): React.JSX.Element {
   return (
-    <div className="flex flex-col gap-0.5 rounded-xl border p-4">
+    <div className="surface flex flex-col gap-0.5 p-5">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="flex items-center gap-1.5 font-heading text-2xl font-semibold tabular-nums">
         {value}
@@ -360,7 +360,7 @@ function Bars({
   )
 }
 
-const LEVEL_CLASSES = ['bg-muted', 'bg-primary/25', 'bg-primary/50', 'bg-primary/75', 'bg-primary']
+const LEVEL_CLASSES = ['bg-muted', 'bg-signal/25', 'bg-signal/50', 'bg-signal/75', 'bg-signal']
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /** 53 weeks × 7 days, Monday on top. Shade = practice time, split into quartiles of active days. */
@@ -404,26 +404,35 @@ function Heatmap({ stats }: { stats: Stats }): React.JSX.Element {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Fills the card: 53 equal week columns, square cells. Scrolls only when too narrow. */}
       <div className="overflow-x-auto">
-        <div className="inline-flex flex-col gap-1">
+        <div className="flex min-w-[40rem] flex-col gap-1.5">
           <div className="relative h-4 text-xs text-muted-foreground">
             {months.map((m) => (
-              <span key={`${m.col}-${m.label}`} className="absolute" style={{ left: m.col * 15 }}>
+              <span
+                key={`${m.col}-${m.label}`}
+                className="absolute"
+                style={{ left: `${(m.col / weeks.length) * 100}%` }}
+              >
                 {m.label}
               </span>
             ))}
           </div>
-          <div className="flex gap-[3px]" onMouseLeave={() => setHover(null)}>
+          <div
+            className="grid gap-[3px]"
+            style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}
+            onMouseLeave={() => setHover(null)}
+          >
             {weeks.map((col, w) => (
               <div key={w} className="flex flex-col gap-[3px]">
                 {col.map((date, d) =>
                   date === null ? (
-                    <span key={d} className="size-3" />
+                    <span key={d} className="aspect-square w-full" />
                   ) : (
                     <span
                       key={d}
                       className={cn(
-                        'size-3 rounded-[3px] ring-foreground/60 hover:ring-1',
+                        'aspect-square w-full rounded-[3px] ring-foreground/60 hover:ring-1',
                         LEVEL_CLASSES[level(byDate.get(date))]
                       )}
                       onMouseEnter={() => setHover(date)}

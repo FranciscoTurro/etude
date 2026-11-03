@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { cn } from 'cn'
+import { Segmented } from '@/components/common/Segmented'
 import { WeekPanel } from '@/components/week/WeekPanel'
 import { ExercisesPanel } from '@/components/exercises/ExercisesPanel'
 import { DaysPanel } from '@/components/days/DaysPanel'
@@ -8,6 +8,11 @@ import type { Day } from '../../../../shared/day'
 import type { WeekScheduleEntry } from '../../../../shared/week'
 
 type Section = 'days' | 'exercises' | 'songs'
+const SECTIONS = [
+  { value: 'days', label: 'Days' },
+  { value: 'exercises', label: 'Exercises' },
+  { value: 'songs', label: 'Songs' }
+] as const
 
 interface Props {
   exercises: Exercise[] | null
@@ -31,24 +36,7 @@ export function LibraryScreen({ exercises, days, week, onChanged }: Props): Reac
   )
 
   const tabs = (
-    <div className="flex rounded-lg border p-0.5" role="tablist" aria-label="Library section">
-      {(['days', 'exercises', 'songs'] as const).map((s) => (
-        <button
-          key={s}
-          role="tab"
-          aria-selected={section === s}
-          onClick={() => setSection(s)}
-          className={cn(
-            'rounded-md px-3 py-1 font-heading text-base font-semibold capitalize tracking-tight transition-colors',
-            section === s
-              ? 'bg-muted text-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          {s}
-        </button>
-      ))}
-    </div>
+    <Segmented label="Library section" options={SECTIONS} value={section} onChange={setSection} />
   )
 
   return (

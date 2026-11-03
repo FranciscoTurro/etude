@@ -6,13 +6,15 @@ import type { GraphableExercise } from '../../../../shared/history'
 import { formatRelativeDay } from './dates'
 
 interface Props {
+  /** 'exercises' | 'songs', for the search box */
+  noun: string
   exercises: GraphableExercise[]
   selectedId: number | null
   onSelect: (id: number) => void
 }
 
 /** Searchable list of graphable exercises, alphabetical; deleted ones last. */
-export function ExerciseList({ exercises, selectedId, onSelect }: Props): React.JSX.Element {
+export function ExerciseList({ noun, exercises, selectedId, onSelect }: Props): React.JSX.Element {
   const [query, setQuery] = useState('')
 
   const [active, deleted] = useMemo(() => {
@@ -51,8 +53,8 @@ export function ExerciseList({ exercises, selectedId, onSelect }: Props): React.
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search exercises"
-          aria-label="Search exercises"
+          placeholder={`Search ${noun}`}
+          aria-label={`Search ${noun}`}
           className="pl-8"
         />
       </div>

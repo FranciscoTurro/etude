@@ -118,7 +118,7 @@ export function SessionsPane({ visible }: Props): React.JSX.Element {
             weekStartsOn={1}
             showOutsideDays={false}
             // Stretch to the column width, but keep rows short instead of square cells.
-            className="shrink-0 rounded-xl border p-3 [--cell-size:--spacing(8)] [&_.rdp-day]:aspect-auto [&_.rdp-day]:h-(--cell-size) [&_.rdp-day_button]:aspect-auto [&_.rdp-day_button]:h-full"
+            className="surface shrink-0 p-3 [--cell-size:--spacing(8)] [&_.rdp-day]:aspect-auto [&_.rdp-day]:h-(--cell-size) [&_.rdp-day_button]:aspect-auto [&_.rdp-day_button]:h-full"
             classNames={{ root: 'w-full' }}
           />
           <div className="flex flex-col gap-3">
@@ -136,7 +136,7 @@ function SessionCard({ session: s }: { session: HistorySession }): React.JSX.Ele
   const completed = s.logs.filter((l) => l.status === 'completed').length
   const skipped = s.logs.length - completed
   return (
-    <div className="rounded-xl border">
+    <div className="surface overflow-hidden">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b px-4 py-2.5">
         <span className="min-w-0 truncate font-medium" title={s.dayName}>
           {s.dayName}

@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { cn } from 'cn'
-import { CopyIcon, MetronomeIcon, PencilIcon, PlusIcon, TimerIcon, Trash2Icon } from 'lucide-react'
+import {
+  CopyIcon,
+  MetronomeIcon,
+  MusicIcon,
+  PencilIcon,
+  PlusIcon,
+  TimerIcon,
+  Trash2Icon
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -81,10 +89,13 @@ export function ExercisesPanel({ tabs, kind, exercises, onChanged }: Props): Rea
           <li key={exercise.id} className="min-w-0">
             <Card className="h-full">
               <CardHeader>
-                <CardTitle className="min-w-0 truncate" title={exercise.name}>
-                  {exercise.name}
+                <CardTitle className="flex min-w-0 items-center gap-2" title={exercise.name}>
+                  {exercise.kind === 'song' && (
+                    <MusicIcon className="size-4 shrink-0 text-signal" aria-label="Song" />
+                  )}
+                  <span className="truncate">{exercise.name}</span>
                 </CardTitle>
-                <CardDescription className="flex items-center gap-4">
+                <CardDescription className="flex items-center gap-4 font-mono text-xs">
                   {exercise.allocatedSeconds !== null && (
                     <span className="flex items-center gap-1">
                       <TimerIcon className="size-3.5" />

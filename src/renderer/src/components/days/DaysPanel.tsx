@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { cn } from 'cn'
-import { PencilIcon, PlusIcon, TimerIcon, Trash2Icon } from 'lucide-react'
+import { PencilIcon, PlusIcon, TimerIcon, Trash2Icon, MusicIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -191,7 +191,7 @@ function DayCard({
             {day.name}
           </CardTitle>
           <CardDescription className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 font-mono text-xs">
               <TimerIcon className="size-3.5" />
               {formatDuration(day.totalSeconds)}
             </span>
@@ -213,11 +213,17 @@ function DayCard({
             {cellHeight > 0 &&
               day.slots.slice(0, visible).map((slot, i) => (
                 <li key={i} className="flex h-5 min-w-0 gap-2" title={slotLabel(slot)}>
-                  <span className="w-5 shrink-0 text-right text-muted-foreground tabular-nums">
-                    {i + 1}.
+                  <span className="w-5 shrink-0 text-right font-mono text-xs leading-5 text-muted-foreground">
+                    {i + 1}
                   </span>
                   <span className="min-w-0 truncate">
-                    {slot.song && slotLabel(slot)}
+                    {slot.song && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <MusicIcon className="size-3.5 shrink-0 text-signal" aria-label="Song" />
+                        {slot.exercises.find((e) => e.id === slot.preselectedId)?.name ??
+                          'No songs yet'}
+                      </span>
+                    )}
                     {!slot.song &&
                       slot.exercises.map((e, j) => (
                         <span key={e.id}>

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from 'cn'
 import type { BpmPoint, GraphableExercise } from '../../../../shared/history'
+import type { ExerciseKind } from '../../../../shared/exercise'
+import { Segmented } from '@/components/common/Segmented'
 import { BpmChart } from './BpmChart'
 import { parseLocalDate } from './dates'
 import { ExerciseList } from './ExerciseList'
@@ -23,37 +25,30 @@ interface Props {
 
 const VIEWS = [
   { key: 'progress', label: 'Progress' },
+  { key: 'songs', label: 'Songs' },
   { key: 'stats', label: 'Stats' }
 ] as const
 type View = (typeof VIEWS)[number]['key']
 
-/** Progress (per-exercise graph + sessions) or Stats (totals, streaks, records). */
+/** Progress (per-exercise graph + sessions), Songs (the same, for songs) or Stats (totals, streaks, records). */
 export function HistoryScreen({ visible }: Props): React.JSX.Element {
   const [view, setView] = useState<View>('progress')
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 justify-center border-b py-2">
-        <div className="flex rounded-md border p-0.5" role="tablist" aria-label="History view">
-          {VIEWS.map((v) => (
-            <button
-              key={v.key}
-              role="tab"
-              aria-selected={view === v.key}
-              onClick={() => setView(v.key)}
-              className={cn(
-                'rounded-sm px-3 py-1 text-xs font-medium transition-colors',
-                view === v.key
-                  ? 'bg-muted text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex shrink-0 justify-center pb-3">
+        <Segmented
+          label="History view"
+          size="sm"
+          options={VIEWS.map((v) => ({ value: v.key, label: v.label }))}
+          value={view}
+          onChange={setView}
+        />
       </div>
       <div className={cn('min-h-0 flex-1', view !== 'progress' && 'hidden')}>
-        <ProgressView visible={visible && view === 'progress'} />
+        <ProgressView kind="exercise" visible={visible && view === 'progress'} />
+      </div>
+      <div className={cn('min-h-0 flex-1', view !== 'songs' && 'hidden')}>
+        <ProgressView kind="song" visible={visible && view === 'songs'} />
       </div>
       <div className={cn('min-h-0 flex-1 overflow-y-auto', view !== 'stats' && 'hidden')}>
         <StatsView visible={visible && view === 'stats'} />
@@ -62,15 +57,16 @@ export function HistoryScreen({ visible }: Props): React.JSX.Element {
   )
 }
 
-/** Three columns: exercise picker | BPM progress chart | session calendar + day log. */
-function ProgressView({ visible }: Props): React.JSX.Element {
+/** Three columns: exercise (or song) picker | BPM progress chart | session calendar + day log. */
+function ProgressView({ visible, kind }: Props & { kind: ExerciseKind }): React.JSX.Element {
   const [exercises, setExercises] = useState<GraphableExercise[] | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const song = kind === 'song'
 
   useEffect(() => {
     if (!visible) return
-    window.api.history.exercises().then(setExercises)
-  }, [visible])
+    window.api.history.exercises().then((all) => setExercises(all.filter((e) => e.kind === kind)))
+  }, [visible, kind])
 
   // Keep the selection if it still exists, otherwise fall back to the most recently practiced.
   const exercise =
@@ -82,21 +78,29 @@ function ProgressView({ visible }: Props): React.JSX.Element {
   return (
     <div className="grid h-full grid-cols-[14rem_minmax(0,1fr)_21rem] divide-x xl:grid-cols-[17rem_minmax(0,1fr)_25rem]">
       <section className="flex min-h-0 min-w-0 flex-col gap-4 p-6">
-        <h2 className="font-heading text-xl font-semibold tracking-tight">Exercises</h2>
+        <h2 className="font-heading text-xl font-semibold tracking-tight">
+          {song ? 'Songs' : 'Exercises'}
+        </h2>
         {exercises?.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            Exercises appear here once you complete one with a BPM.
+            {song ? 'Songs' : 'Exercises'} appear here once you complete one with a BPM.
           </p>
         )}
         {exercises && exercises.length > 0 && (
           <ExerciseList
+            noun={song ? 'songs' : 'exercises'}
             exercises={exercises}
             selectedId={exercise?.exerciseId ?? null}
             onSelect={setSelectedId}
           />
         )}
       </section>
-      <ProgressSection visible={visible} exercise={exercise} empty={exercises?.length === 0} />
+      <ProgressSection
+        visible={visible}
+        exercise={exercise}
+        empty={exercises?.length === 0}
+        noun={song ? 'a song' : 'an exercise'}
+      />
       <SessionsPane visible={visible} />
     </div>
   )
@@ -105,11 +109,14 @@ function ProgressView({ visible }: Props): React.JSX.Element {
 function ProgressSection({
   visible,
   exercise,
-  empty
+  empty,
+  noun
 }: {
   visible: boolean
   exercise: GraphableExercise | null
   empty: boolean
+  /** 'an exercise' | 'a song', for the empty state */
+  noun: string
 }): React.JSX.Element {
   const [points, setPoints] = useState<BpmPoint[] | null>(null)
   const [range, setRange] = useState<RangeKey>('90d')
@@ -149,38 +156,25 @@ function ProgressSection({
           )}
         </h2>
         {exercise && (
-          <div
-            className="flex shrink-0 rounded-md border p-0.5"
-            role="group"
-            aria-label="Time range"
-          >
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                onClick={() => setRange(r.key)}
-                aria-pressed={range === r.key}
-                className={cn(
-                  'rounded-sm px-2 py-0.5 text-xs font-medium transition-colors',
-                  range === r.key
-                    ? 'bg-muted text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            kind="toggle"
+            size="sm"
+            label="Time range"
+            options={RANGES.map((r) => ({ value: r.key, label: r.label }))}
+            value={range}
+            onChange={setRange}
+          />
         )}
       </header>
 
       {empty && (
         <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
-          No BPM history yet. Complete an exercise that has a BPM to see your progress here.
+          No BPM history yet. Complete {noun} that has a BPM to see your progress here.
         </div>
       )}
 
       {exercise && points && (
-        <div className="flex min-h-0 flex-1 flex-col gap-5 rounded-xl border p-5">
+        <div className="surface flex min-h-0 flex-1 flex-col gap-5 p-6">
           <Summary points={shown} />
           {shown.length > 0 ? (
             <BpmChart points={shown} from={from} />

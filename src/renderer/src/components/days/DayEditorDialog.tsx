@@ -186,16 +186,16 @@ function DayEditor({
         {/* Library */}
         <div className="flex min-h-0 flex-col gap-2">
           <Label>Exercises</Label>
-          <ul className="flex max-h-[60vh] flex-col gap-1 overflow-y-auto rounded-lg border p-1.5">
+          <ul className="flex max-h-[60vh] flex-col gap-0.5 overflow-y-auto rounded-2xl bg-background p-2">
             <li
               draggable
               onDragStart={(e) => startDrag(e, { kind: 'song' })}
               onDragEnd={endDrag}
               title="Rotates through every song in the Songs tab, least recently played first"
-              className="group flex cursor-grab items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted active:cursor-grabbing"
+              className="group flex cursor-grab items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-card active:cursor-grabbing"
             >
               <GripVerticalIcon className="size-3.5 shrink-0 text-muted-foreground" />
-              <MusicIcon className="size-3.5 shrink-0" />
+              <MusicIcon className="size-3.5 shrink-0 text-signal" />
               <span className="min-w-0 flex-1 truncate">Song</span>
               <span className="text-xs text-muted-foreground">untimed</span>
               <Button
@@ -214,11 +214,11 @@ function DayEditor({
                 draggable
                 onDragStart={(e) => startDrag(e, { kind: 'exercise', exerciseId: ex.id })}
                 onDragEnd={endDrag}
-                className="group flex cursor-grab items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted active:cursor-grabbing"
+                className="group flex cursor-grab items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-card active:cursor-grabbing"
               >
                 <GripVerticalIcon className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">{ex.name}</span>
-                <span className="text-xs text-muted-foreground tabular-nums">
+                <span className="font-mono text-xs text-muted-foreground">
                   {formatDuration(ex.allocatedSeconds ?? 0)}
                 </span>
                 <Button
@@ -239,18 +239,18 @@ function DayEditor({
         <div className="flex min-h-0 flex-col gap-2">
           <div className="flex items-baseline justify-between">
             <Label>Slots</Label>
-            <span className="text-xs text-muted-foreground tabular-nums">
+            <span className="font-mono text-xs text-muted-foreground">
               Total {formatDuration(totalSeconds)}
               {hasSongs && ' + songs'}
             </span>
           </div>
-          <div className="flex max-h-[60vh] min-h-40 flex-col overflow-y-auto rounded-lg border p-1.5">
+          <div className="flex max-h-[60vh] min-h-40 flex-col overflow-y-auto rounded-2xl bg-background p-2">
             {slots.length === 0 ? (
               <div
                 {...gap(0)}
                 className={cn(
                   'flex flex-1 items-center justify-center rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground',
-                  over === 'gap-0' && 'border-primary bg-primary/5 text-foreground'
+                  over === 'gap-0' && 'border-signal bg-signal/5 text-foreground'
                 )}
               >
                 Drag exercises here, or use + to add them.
@@ -276,8 +276,8 @@ function DayEditor({
                             setSlots((s) => addToSlot(s, slot.key, d.exerciseId, d.fromSlot))
                         )}
                         className={cn(
-                          'flex items-start gap-2 rounded-lg border bg-card p-2 transition-colors',
-                          over === targetId && 'border-primary bg-primary/5',
+                          'flex items-start gap-2 rounded-xl border border-transparent bg-card p-2.5 shadow-paper transition-colors',
+                          over === targetId && 'border-signal bg-signal/5',
                           dragging?.kind === 'slot' && dragging.slotKey === slot.key && 'opacity-40'
                         )}
                       >
@@ -295,8 +295,8 @@ function DayEditor({
                           {slot.song && (
                             <>
                               <div className="flex flex-wrap gap-1">
-                                <span className="inline-flex items-center gap-1 rounded-md bg-muted py-0.5 pr-0.5 pl-2 text-sm">
-                                  <MusicIcon className="size-3.5" />
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-muted py-0.5 pr-0.5 pl-2.5 text-sm">
+                                  <MusicIcon className="size-3.5 text-signal" />
                                   Song
                                   <Button
                                     type="button"
@@ -331,7 +331,7 @@ function DayEditor({
                                   }}
                                   onDragEnd={endDrag}
                                   className={cn(
-                                    'inline-flex cursor-grab items-center gap-1 rounded-md bg-muted py-0.5 pr-0.5 pl-2 text-sm active:cursor-grabbing',
+                                    'inline-flex cursor-grab items-center gap-1.5 rounded-full bg-muted py-0.5 pr-0.5 pl-2.5 text-sm active:cursor-grabbing',
                                     dragging?.kind === 'exercise' &&
                                       dragging.fromSlot === slot.key &&
                                       dragging.exerciseId === id &&
@@ -339,7 +339,7 @@ function DayEditor({
                                   )}
                                 >
                                   {ex?.name ?? `#${id}`}
-                                  <span className="text-xs text-muted-foreground tabular-nums">
+                                  <span className="font-mono text-xs text-muted-foreground">
                                     {ex && formatDuration(ex.allocatedSeconds ?? 0)}
                                   </span>
                                   <Button
@@ -394,7 +394,7 @@ function Gap({
       <div
         className={cn(
           'h-0.5 w-full rounded-full transition-colors',
-          over ? 'bg-primary' : active ? 'bg-border' : 'bg-transparent'
+          over ? 'bg-signal' : active ? 'bg-border' : 'bg-transparent'
         )}
       />
     </div>

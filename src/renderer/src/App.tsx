@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { cn } from 'cn'
+import { Segmented } from '@/components/common/Segmented'
 import { SettingsIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SettingsDialog } from '@/components/settings/SettingsDialog'
@@ -12,6 +13,11 @@ import type { WeekScheduleEntry } from '../../shared/week'
 import type { Settings } from '../../shared/settings'
 
 type Tab = 'practice' | 'library' | 'history'
+const TABS = [
+  { value: 'practice', label: 'Practice' },
+  { value: 'library', label: 'Library' },
+  { value: 'history', label: 'History' }
+] as const
 
 function App(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('practice')
@@ -42,24 +48,13 @@ function App(): React.JSX.Element {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
-      <nav className="relative z-10 flex shrink-0 items-center justify-center gap-1 border-b bg-background p-2">
-        {(['practice', 'library', 'history'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            aria-current={tab === t ? 'page' : undefined}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors',
-              tab === t ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {t}
-          </button>
-        ))}
+      <nav className="relative z-10 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center px-6 py-3 xl:px-10">
+        <span className="text-lg font-bold tracking-wide">Etude</span>
+        <Segmented label="Section" options={TABS} value={tab} onChange={setTab} />
         <Button
           variant="ghost"
-          size="icon-sm"
-          className="absolute right-3"
+          size="icon"
+          className="justify-self-end"
           onClick={() => setSettingsOpen(true)}
           title="Settings"
           aria-label="Settings"

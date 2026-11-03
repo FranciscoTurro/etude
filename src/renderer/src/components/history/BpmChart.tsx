@@ -5,7 +5,7 @@ import type { BpmPoint } from '../../../../shared/history'
 import { formatShortDate, parseLocalDate } from './dates'
 
 const config = {
-  last: { label: 'Last BPM of the day', color: 'var(--primary)' },
+  last: { label: 'Last BPM of the day', color: 'var(--signal)' },
   max: { label: 'Max BPM (when higher)', color: 'var(--muted-foreground)' }
 } satisfies ChartConfig
 
@@ -86,7 +86,7 @@ export function BpmChart({ points, from }: Props): React.JSX.Element {
       </ChartContainer>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-4 rounded-full bg-primary" />
+          <span className="h-0.5 w-4 rounded-full bg-signal" />
           {config.last.label}
         </span>
         <span className="flex items-center gap-1.5">
