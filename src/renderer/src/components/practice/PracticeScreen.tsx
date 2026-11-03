@@ -401,7 +401,7 @@ export function PracticeScreen({
       <div className="grid items-start gap-6 md:min-h-0 md:flex-1 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] md:items-stretch">
         {/* Timer side */}
         <div className="flex flex-col gap-4 md:min-h-0 md:overflow-y-auto">
-          <section className="surface flex min-h-[34rem] flex-col p-7 md:flex-1 xl:px-11 xl:py-9">
+          <section className="surface flex min-h-136 flex-col p-7 md:flex-1 xl:px-11 xl:py-9">
             <header className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">
                 {WEEKDAY_LABELS[today]} –{' '}

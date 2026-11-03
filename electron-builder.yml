@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: etude
+appId: com.etude.app
+productName: Etude
 directories:
   buildResources: build
 files:
