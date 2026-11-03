@@ -1,6 +1,4 @@
-import { rm } from 'fs/promises'
-import { join } from 'path'
-import { dataDir, getDb } from './index'
+import { getDb } from './index'
 import { validateExerciseInput, type Exercise, type ExerciseInput } from '../../shared/exercise'
 
 interface ExerciseRow {
@@ -86,15 +84,8 @@ export function daysUsingExercise(id: number): string[] {
     .all(id) as string[]
 }
 
-/**
- * Removes the exercise, its day slots and attachment rows (FK cascades), then
- * its attachment files. Practice logs are untouched.
- */
-export async function deleteExercise(id: number): Promise<void> {
+/** Removes the exercise and its day slots (FK cascade). Practice logs are untouched. */
+export function deleteExercise(id: number): void {
   const { changes } = getDb().prepare('DELETE FROM Exercise WHERE id = ?').run(id)
   if (!changes) throw new Error(`Exercise ${id} not found`)
-  // Rows are gone first, so a failure here only leaves orphaned files, never broken rows.
-  await rm(join(dataDir(), 'attachments', String(id)), { recursive: true, force: true }).catch(
-    (err) => console.error(`Could not remove attachments for exercise ${id}`, err)
-  )
 }

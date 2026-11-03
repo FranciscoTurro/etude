@@ -6,7 +6,7 @@ import { migrate } from './migrations'
 let db: Database.Database | null = null
 
 /**
- * Root of all app data: the SQLite file and the attachments/ folder live here.
+ * Root of all app data (the SQLite file lives here).
  * Set ETUDE_DATA_DIR to point the app at a throwaway folder (dev/testing).
  */
 export function dataDir(): string {

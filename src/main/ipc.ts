@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, nativeTheme } from 'electron'
 import {
   createExercise,
   daysUsingExercise,
@@ -13,6 +13,7 @@ import type { DayInput } from '../shared/day'
 import { getWeekSchedule, setWeekday } from './db/week'
 import type { Weekday } from '../shared/week'
 import { getSettings, setSetting } from './db/settings'
+import { SETTING, isTheme, type Theme } from '../shared/settings'
 import { finishSession, logExercise, startSession } from './db/sessions'
 import type { ExerciseLogInput } from '../shared/session'
 
@@ -35,6 +36,11 @@ export function registerIpc(): void {
 
   ipcMain.handle('settings:getAll', () => getSettings())
   ipcMain.handle('settings:set', (_, key: string, value: string) => setSetting(key, value))
+  ipcMain.handle('theme:set', (_, theme: Theme) => {
+    if (!isTheme(theme)) throw new Error(`Invalid theme: ${theme}`)
+    setSetting(SETTING.theme, theme)
+    nativeTheme.themeSource = theme // the page follows via prefers-color-scheme
+  })
 
   ipcMain.handle('sessions:start', (_, dayId: number) => startSession(dayId))
   ipcMain.handle('sessions:log', (_, input: ExerciseLogInput) => logExercise(input))

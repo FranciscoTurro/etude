@@ -134,3 +134,14 @@
     cursor: pointer;
   }
 }
+/* metronome beat indicator: flash on each click, then fade */
+@keyframes metronome-pulse {
+  from {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+  to {
+    opacity: 0.15;
+    transform: scale(1);
+  }
+}

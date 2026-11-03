@@ -58,12 +58,15 @@ export function ExercisesPanel({ exercises, onChanged }: Props): React.JSX.Eleme
         </div>
       )}
 
-      <ul className="grid items-start gap-3 2xl:grid-cols-2">
+      {/* auto-rows-fr + h-full: every card is as tall as the tallest one */}
+      <ul className="grid auto-rows-fr gap-3 2xl:grid-cols-2">
         {exercises?.map((exercise) => (
-          <li key={exercise.id}>
-            <Card>
+          <li key={exercise.id} className="min-w-0">
+            <Card className="h-full">
               <CardHeader>
-                <CardTitle>{exercise.name}</CardTitle>
+                <CardTitle className="min-w-0 truncate" title={exercise.name}>
+                  {exercise.name}
+                </CardTitle>
                 <CardDescription className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
                     <TimerIcon className="size-3.5" />
@@ -75,19 +78,37 @@ export function ExercisesPanel({ exercises, onChanged }: Props): React.JSX.Eleme
                   </span>
                 </CardDescription>
                 <CardAction className="flex gap-1">
-                  <Button variant="ghost" size="icon-sm" onClick={() => openEdit(exercise)} title="Edit">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => openEdit(exercise)}
+                    title="Edit"
+                  >
                     <PencilIcon />
                   </Button>
-                  <Button variant="ghost" size="icon-sm" onClick={() => duplicate(exercise)} title="Duplicate">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => duplicate(exercise)}
+                    title="Duplicate"
+                  >
                     <CopyIcon />
                   </Button>
-                  <Button variant="ghost" size="icon-sm" onClick={() => setDeleting(exercise)} title="Delete">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setDeleting(exercise)}
+                    title="Delete"
+                  >
                     <Trash2Icon />
                   </Button>
                 </CardAction>
               </CardHeader>
               {exercise.description && (
-                <CardContent className="text-sm whitespace-pre-wrap text-muted-foreground">
+                <CardContent
+                  className="line-clamp-2 text-sm whitespace-pre-wrap text-muted-foreground"
+                  title={exercise.description}
+                >
                   {exercise.description}
                 </CardContent>
               )}

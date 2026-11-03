@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3'
 import { initial } from './001_initial'
+import { dropAttachment } from './002_drop_attachment'
 
 export interface Migration {
   /** Target PRAGMA user_version after this migration runs. Must be sequential, starting at 1. */
@@ -9,7 +10,7 @@ export interface Migration {
 }
 
 // Append new migrations here. Never edit one that has shipped.
-export const migrations: Migration[] = [initial]
+export const migrations: Migration[] = [initial, dropAttachment]
 
 export const LATEST_SCHEMA_VERSION = migrations.length
 

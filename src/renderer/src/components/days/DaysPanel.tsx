@@ -20,9 +20,14 @@ import {
   AlertDialogTitle
 } from '@/components/ui/alert-dialog'
 import { formatDuration, type Exercise } from '../../../../shared/exercise'
-import type { Day } from '../../../../shared/day'
+import type { Day, Slot } from '../../../../shared/day'
 import { WEEKDAY_LABELS, type WeekScheduleEntry } from '../../../../shared/week'
 import { DayEditorDialog } from './DayEditorDialog'
+
+/** Beyond this a day card shows "+N more" (full list on hover) so cards stay the same size. */
+const MAX_SLOT_ROWS = 10
+
+const slotLabel = (slot: Slot): string => slot.exercises.map((e) => e.name).join(' / ')
 
 interface Props {
   days: Day[] | null
@@ -80,12 +85,15 @@ export function DaysPanel({ days, week, exercises, onChanged }: Props): React.JS
         </div>
       )}
 
-      <ul className="grid items-start gap-3 2xl:grid-cols-2">
+      {/* auto-rows-fr + h-full: every card is as tall as the tallest one */}
+      <ul className="grid auto-rows-fr gap-3 2xl:grid-cols-2">
         {days?.map((day) => (
-          <li key={day.id}>
-            <Card>
+          <li key={day.id} className="min-w-0">
+            <Card className="h-full">
               <CardHeader>
-                <CardTitle>{day.name}</CardTitle>
+                <CardTitle className="min-w-0 truncate" title={day.name}>
+                  {day.name}
+                </CardTitle>
                 <CardDescription className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
                     <TimerIcon className="size-3.5" />
@@ -99,34 +107,55 @@ export function DaysPanel({ days, week, exercises, onChanged }: Props): React.JS
                   <Button variant="ghost" size="icon-sm" onClick={() => openEdit(day)} title="Edit">
                     <PencilIcon />
                   </Button>
-                  <Button variant="ghost" size="icon-sm" onClick={() => setDeleting(day)} title="Delete">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setDeleting(day)}
+                    title="Delete"
+                  >
                     <Trash2Icon />
                   </Button>
                 </CardAction>
               </CardHeader>
               {day.slots.length > 0 && (
                 <CardContent>
-                  <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm">
-                    {day.slots.map((slot, i) => (
-                      <li key={i}>
-                        {slot.exercises.map((e, j) => (
-                          <span key={e.id}>
-                            {j > 0 && <span className="text-muted-foreground"> / </span>}
-                            <span
-                              className={
-                                slot.exercises.length > 1 && e.id === slot.preselectedId
-                                  ? 'font-medium'
-                                  : slot.exercises.length > 1
-                                    ? 'text-muted-foreground'
-                                    : undefined
-                              }
-                            >
-                              {e.name}
+                  <ol className="flex flex-col gap-1 text-sm">
+                    {day.slots.slice(0, MAX_SLOT_ROWS).map((slot, i) => (
+                      <li key={i} className="flex min-w-0 gap-2" title={slotLabel(slot)}>
+                        <span className="w-4 shrink-0 text-right text-muted-foreground tabular-nums">
+                          {i + 1}.
+                        </span>
+                        <span className="min-w-0 truncate">
+                          {slot.exercises.map((e, j) => (
+                            <span key={e.id}>
+                              {j > 0 && <span className="text-muted-foreground"> / </span>}
+                              <span
+                                className={
+                                  slot.exercises.length > 1 && e.id === slot.preselectedId
+                                    ? 'font-medium'
+                                    : slot.exercises.length > 1
+                                      ? 'text-muted-foreground'
+                                      : undefined
+                                }
+                              >
+                                {e.name}
+                              </span>
                             </span>
-                          </span>
-                        ))}
+                          ))}
+                        </span>
                       </li>
                     ))}
+                    {day.slots.length > MAX_SLOT_ROWS && (
+                      <li
+                        className="pl-6 text-muted-foreground"
+                        title={day.slots
+                          .slice(MAX_SLOT_ROWS)
+                          .map((s, i) => `${MAX_SLOT_ROWS + i + 1}. ${slotLabel(s)}`)
+                          .join('\n')}
+                      >
+                        +{day.slots.length - MAX_SLOT_ROWS} more
+                      </li>
+                    )}
                   </ol>
                 </CardContent>
               )}

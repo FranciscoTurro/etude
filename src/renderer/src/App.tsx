@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { cn } from 'cn'
+import { SettingsIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { SettingsDialog } from '@/components/settings/SettingsDialog'
 import { ExercisesPanel } from '@/components/exercises/ExercisesPanel'
 import { DaysPanel } from '@/components/days/DaysPanel'
 import { WeekPanel } from '@/components/week/WeekPanel'
@@ -13,6 +16,7 @@ type Tab = 'practice' | 'library'
 
 function App(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('practice')
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [exercises, setExercises] = useState<Exercise[] | null>(null)
   const [days, setDays] = useState<Day[] | null>(null)
   const [week, setWeek] = useState<WeekScheduleEntry[] | null>(null)
@@ -38,8 +42,8 @@ function App(): React.JSX.Element {
   }, [refresh])
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <nav className="sticky top-0 z-10 flex justify-center gap-1 border-b bg-background/80 p-2 backdrop-blur">
+    <div className="flex h-screen flex-col bg-background text-foreground">
+      <nav className="relative z-10 flex shrink-0 items-center justify-center gap-1 border-b bg-background p-2">
         {(['practice', 'library'] as const).map((t) => (
           <button
             key={t}
@@ -53,10 +57,27 @@ function App(): React.JSX.Element {
             {t}
           </button>
         ))}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="absolute right-3"
+          onClick={() => setSettingsOpen(true)}
+          title="Settings"
+          aria-label="Settings"
+        >
+          <SettingsIcon />
+        </Button>
       </nav>
 
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        settings={settings}
+        onChanged={refresh}
+      />
+
       {/* Practice stays mounted so a running session survives a trip to the library. */}
-      <main className={cn(tab !== 'practice' && 'hidden')}>
+      <main className={cn('min-h-0 flex-1 overflow-y-auto', tab !== 'practice' && 'hidden')}>
         <PracticeScreen
           days={days}
           week={week}
@@ -67,11 +88,16 @@ function App(): React.JSX.Element {
         />
       </main>
 
-      <main className={cn(tab !== 'library' && 'hidden')}>
+      <main className={cn('min-h-0 flex-1 overflow-y-auto', tab !== 'library' && 'hidden')}>
         <div className="grid w-full items-start gap-8 p-6 md:grid-cols-2 xl:gap-10 xl:px-10">
           <WeekPanel week={week} days={days ?? []} onChanged={refresh} />
           <ExercisesPanel exercises={exercises} onChanged={refresh} />
-          <DaysPanel days={days} week={week ?? []} exercises={exercises ?? []} onChanged={refresh} />
+          <DaysPanel
+            days={days}
+            week={week ?? []}
+            exercises={exercises ?? []}
+            onChanged={refresh}
+          />
         </div>
       </main>
     </div>

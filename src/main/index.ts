@@ -1,9 +1,11 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { openDb, closeDb } from './db'
 import { registerIpc } from './ipc'
+import { getSettings } from './db/settings'
+import { SETTING, isTheme } from '../shared/settings'
 
 // Desktop app: let the finish chime and mic analysis start without a prior click.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
@@ -14,6 +16,7 @@ function createWindow(): void {
     width: 1100,
     height: 760,
     show: false,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0a0a0a' : '#ffffff', // no white flash in dark mode
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
@@ -59,6 +62,10 @@ app.whenReady().then(() => {
 
   openDb()
   registerIpc()
+  // Saved theme drives Electron's nativeTheme; the page follows prefers-color-scheme,
+  // so it starts in the right theme with no flash.
+  const theme = getSettings()[SETTING.theme]
+  nativeTheme.themeSource = isTheme(theme) ? theme : 'system'
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))

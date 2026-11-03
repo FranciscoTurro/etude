@@ -1,6 +1,8 @@
 export interface SlotExercise {
   id: number
   name: string
+  /** The exercise's observations. */
+  description: string
   bpm: number | null
   allocatedSeconds: number
 }

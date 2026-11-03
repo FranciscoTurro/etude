@@ -1,10 +1,15 @@
 let ctx: AudioContext | null = null
 
+/** One output context for everything the app plays (chime, metronome). */
+export function audioOut(): AudioContext {
+  ctx ??= new AudioContext()
+  if (ctx.state === 'suspended') void ctx.resume()
+  return ctx
+}
+
 /** A loud three-note rising chime: "time's up, next exercise". */
 export function playFinishChime(): void {
-  ctx ??= new AudioContext()
-  const c = ctx
-  void c.resume()
+  const c = audioOut()
   const start = c.currentTime + 0.02
   ;[660, 880, 1320].forEach((freq, i) => {
     const t = start + i * 0.18
@@ -19,4 +24,19 @@ export function playFinishChime(): void {
     osc.start(t)
     osc.stop(t + 1.3)
   })
+}
+
+/** A short, sharp click scheduled at audio time `t`. */
+export function scheduleClick(t: number): void {
+  const c = audioOut()
+  const osc = c.createOscillator()
+  const gain = c.createGain()
+  osc.type = 'square'
+  osc.frequency.value = 1500
+  gain.gain.setValueAtTime(0, t)
+  gain.gain.linearRampToValueAtTime(0.35, t + 0.001)
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04)
+  osc.connect(gain).connect(c.destination)
+  osc.start(t)
+  osc.stop(t + 0.05)
 }

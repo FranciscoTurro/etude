@@ -28,14 +28,6 @@ export const initial: Migration = {
       UPDATE Exercise SET updated_at = ${NOW} WHERE id = NEW.id;
     END;
 
-    CREATE TABLE Attachment (
-      id          INTEGER PRIMARY KEY,
-      exercise_id INTEGER NOT NULL REFERENCES Exercise(id) ON DELETE CASCADE,
-      file_path   TEXT    NOT NULL UNIQUE,  -- relative to the app's data folder
-      kind        TEXT    NOT NULL CHECK (kind IN ('pdf', 'image'))
-    );
-    CREATE INDEX Attachment_exercise_id ON Attachment(exercise_id);
-
     CREATE TABLE Day (
       id         INTEGER PRIMARY KEY,
       name       TEXT NOT NULL CHECK (length(trim(name)) > 0),

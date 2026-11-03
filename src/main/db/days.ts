@@ -21,6 +21,7 @@ interface SlotRow {
   name: string
   bpm: number | null
   allocated_seconds: number
+  description: string
 }
 
 export function listDays(): Day[] {
@@ -28,7 +29,7 @@ export function listDays(): Day[] {
   const days = db.prepare('SELECT * FROM Day ORDER BY name COLLATE NOCASE, id').all() as DayRow[]
   const rows = db
     .prepare(
-      `SELECT de.day_id, de.position, e.id, e.name, e.bpm, e.allocated_seconds
+      `SELECT de.day_id, de.position, e.id, e.name, e.description, e.bpm, e.allocated_seconds
        FROM DayExercise de JOIN Exercise e ON e.id = de.exercise_id
        ORDER BY de.day_id, de.position, de.id`
     )
@@ -49,7 +50,13 @@ export function listDays(): Day[] {
   for (const r of rows) {
     const slots = byDay.get(r.day_id) ?? byDay.set(r.day_id, new Map()).get(r.day_id)!
     const slot = slots.get(r.position) ?? slots.set(r.position, []).get(r.position)!
-    slot.push({ id: r.id, name: r.name, bpm: r.bpm, allocatedSeconds: r.allocated_seconds })
+    slot.push({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      bpm: r.bpm,
+      allocatedSeconds: r.allocated_seconds
+    })
   }
 
   return days.map((d) => {
