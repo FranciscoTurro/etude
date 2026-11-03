@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { cn } from 'cn'
 import { CopyIcon, MetronomeIcon, PencilIcon, PlusIcon, TimerIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,15 +11,20 @@ import {
   CardTitle
 } from '@/components/ui/card'
 import { formatDuration, type Exercise } from '../../../../shared/exercise'
+import { Pager, gridStyle, useGridFit, usePages } from '@/components/library/paging'
 import { ExerciseFormDialog } from './ExerciseFormDialog'
 import { DeleteExerciseDialog } from './DeleteExerciseDialog'
 
 interface Props {
+  /** Library section switcher, shown as this panel's title */
+  tabs: React.ReactNode
   exercises: Exercise[] | null
   onChanged: () => void
 }
 
-export function ExercisesPanel({ exercises, onChanged }: Props): React.JSX.Element {
+export function ExercisesPanel({ tabs, exercises, onChanged }: Props): React.JSX.Element {
+  const [gridRef, { cols, rows }] = useGridFit<HTMLUListElement>(300, 124)
+  const { shown, page, pages, setPage } = usePages(exercises ?? [], cols * rows)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Exercise | null>(null)
   const [deleting, setDeleting] = useState<Exercise | null>(null)
@@ -39,13 +45,16 @@ export function ExercisesPanel({ exercises, onChanged }: Props): React.JSX.Eleme
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      <header className="flex items-center justify-between">
-        <h2 className="font-heading text-xl font-semibold tracking-tight">Exercises</h2>
+    <section className="flex min-h-0 flex-1 flex-col gap-4">
+      <header className="flex shrink-0 items-center justify-between gap-3">
+        {tabs}
         {exercises && exercises.length > 0 && (
-          <Button size="sm" onClick={openCreate}>
-            <PlusIcon /> New exercise
-          </Button>
+          <div className="flex items-center gap-3">
+            <Pager page={page} pages={pages} onPage={setPage} />
+            <Button size="sm" onClick={openCreate}>
+              <PlusIcon /> New exercise
+            </Button>
+          </div>
         )}
       </header>
 
@@ -58,9 +67,13 @@ export function ExercisesPanel({ exercises, onChanged }: Props): React.JSX.Eleme
         </div>
       )}
 
-      {/* auto-rows-fr + h-full: every card is as tall as the tallest one */}
-      <ul className="grid auto-rows-fr gap-3 2xl:grid-cols-2">
-        {exercises?.map((exercise) => (
+      {/* Exactly as many equal cells as fit; the rest goes on other pages. */}
+      <ul
+        ref={gridRef}
+        className={cn('grid min-h-0 flex-1', exercises?.length === 0 && 'hidden')}
+        style={gridStyle(cols, rows)}
+      >
+        {shown.map((exercise) => (
           <li key={exercise.id} className="min-w-0">
             <Card className="h-full">
               <CardHeader>
@@ -106,7 +119,7 @@ export function ExercisesPanel({ exercises, onChanged }: Props): React.JSX.Eleme
               </CardHeader>
               {exercise.description && (
                 <CardContent
-                  className="line-clamp-2 text-sm whitespace-pre-wrap text-muted-foreground"
+                  className="line-clamp-2 min-h-0 text-sm whitespace-pre-wrap text-muted-foreground"
                   title={exercise.description}
                 >
                   {exercise.description}

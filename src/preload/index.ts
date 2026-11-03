@@ -5,6 +5,7 @@ import type { Day, DayInput } from '../shared/day'
 import type { Weekday, WeekScheduleEntry } from '../shared/week'
 import type { Settings, Theme } from '../shared/settings'
 import type { ExerciseLogInput } from '../shared/session'
+import type { BpmPoint, GraphableExercise, HistorySession, SessionSummary } from '../shared/history'
 
 // Custom APIs for renderer
 const api = {
@@ -33,7 +34,8 @@ const api = {
   },
   settings: {
     getAll: (): Promise<Settings> => ipcRenderer.invoke('settings:getAll'),
-    set: (key: string, value: string): Promise<void> => ipcRenderer.invoke('settings:set', key, value),
+    set: (key: string, value: string): Promise<void> =>
+      ipcRenderer.invoke('settings:set', key, value),
     setTheme: (theme: Theme): Promise<void> => ipcRenderer.invoke('theme:set', theme)
   },
   sessions: {
@@ -41,6 +43,14 @@ const api = {
     start: (dayId: number): Promise<number> => ipcRenderer.invoke('sessions:start', dayId),
     log: (input: ExerciseLogInput): Promise<void> => ipcRenderer.invoke('sessions:log', input),
     finish: (sessionId: number): Promise<void> => ipcRenderer.invoke('sessions:finish', sessionId)
+  },
+  history: {
+    /** Every session, newest first, without logs. */
+    sessions: (): Promise<SessionSummary[]> => ipcRenderer.invoke('history:sessions'),
+    session: (id: number): Promise<HistorySession | null> =>
+      ipcRenderer.invoke('history:session', id),
+    exercises: (): Promise<GraphableExercise[]> => ipcRenderer.invoke('history:exercises'),
+    bpm: (exerciseId: number): Promise<BpmPoint[]> => ipcRenderer.invoke('history:bpm', exerciseId)
   }
 }
 

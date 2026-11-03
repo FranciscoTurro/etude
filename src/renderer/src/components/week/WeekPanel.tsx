@@ -31,7 +31,7 @@ export function WeekPanel({ week, days, onChanged }: Props): React.JSX.Element {
   }
 
   return (
-    <section className="flex flex-col gap-4 md:col-span-2">
+    <section className="flex shrink-0 flex-col gap-4">
       <header className="flex items-baseline justify-between">
         <h2 className="font-heading text-xl font-semibold tracking-tight">Week</h2>
         {days.length === 0 && (

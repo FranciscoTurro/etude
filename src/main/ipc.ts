@@ -16,6 +16,12 @@ import { getSettings, setSetting } from './db/settings'
 import { SETTING, isTheme, type Theme } from '../shared/settings'
 import { finishSession, logExercise, startSession } from './db/sessions'
 import type { ExerciseLogInput } from '../shared/session'
+import {
+  exerciseBpmHistory,
+  getSession,
+  listGraphableExercises,
+  listSessionSummaries
+} from './db/history'
 
 export function registerIpc(): void {
   ipcMain.handle('exercises:list', () => listExercises())
@@ -32,7 +38,9 @@ export function registerIpc(): void {
   ipcMain.handle('days:delete', (_, id: number) => deleteDay(id))
 
   ipcMain.handle('week:get', () => getWeekSchedule())
-  ipcMain.handle('week:set', (_, weekday: Weekday, dayId: number | null) => setWeekday(weekday, dayId))
+  ipcMain.handle('week:set', (_, weekday: Weekday, dayId: number | null) =>
+    setWeekday(weekday, dayId)
+  )
 
   ipcMain.handle('settings:getAll', () => getSettings())
   ipcMain.handle('settings:set', (_, key: string, value: string) => setSetting(key, value))
@@ -45,4 +53,9 @@ export function registerIpc(): void {
   ipcMain.handle('sessions:start', (_, dayId: number) => startSession(dayId))
   ipcMain.handle('sessions:log', (_, input: ExerciseLogInput) => logExercise(input))
   ipcMain.handle('sessions:finish', (_, sessionId: number) => finishSession(sessionId))
+
+  ipcMain.handle('history:sessions', () => listSessionSummaries())
+  ipcMain.handle('history:session', (_, id: number) => getSession(id))
+  ipcMain.handle('history:exercises', () => listGraphableExercises())
+  ipcMain.handle('history:bpm', (_, exerciseId: number) => exerciseBpmHistory(exerciseId))
 }
