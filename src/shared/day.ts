@@ -4,14 +4,20 @@ export interface SlotExercise {
   /** The exercise's observations. */
   description: string
   bpm: number | null
-  allocatedSeconds: number
+  /** null for songs */
+  allocatedSeconds: number | null
 }
 
 export interface Slot {
+  /**
+   * A Song slot: its alternatives are every song, so new songs join the rotation on
+   * their own. Empty when there are no songs (practice skips it then).
+   */
+  song: boolean
   /** One exercise = normal slot; several = alternatives, in the order they were added. */
   exercises: SlotExercise[]
-  /** The alternative completed least recently (what play will pick by default). */
-  preselectedId: number
+  /** The alternative completed least recently (what play will pick by default). null = empty Song slot. */
+  preselectedId: number | null
 }
 
 export interface Day {
@@ -19,19 +25,25 @@ export interface Day {
   name: string
   createdAt: string
   slots: Slot[]
-  /** Sum over slots, using each slot's preselected alternative. */
+  /** Sum over slots, using each slot's preselected alternative. Songs count as 0. */
   totalSeconds: number
 }
 
+/** A slot in DayInput: exercise ids (alternatives), or SONG_SLOT. */
+export type DaySlotInput = number[] | typeof SONG_SLOT
+export const SONG_SLOT = 'song'
+
 export interface DayInput {
   name: string
-  /** Ordered slots, each a list of exercise ids. Saved as positions 0, 1, 2... */
-  slots: number[][]
+  /** Ordered slots. Saved as positions 0, 1, 2... */
+  slots: DaySlotInput[]
 }
 
 export function validateDayInput(input: DayInput): string | null {
   if (!input.name.trim()) return 'Name is required'
   for (const slot of input.slots) {
+    if (slot === SONG_SLOT) continue
+    if (!Array.isArray(slot)) return 'Invalid slot'
     if (slot.length === 0) return 'A slot cannot be empty'
     if (new Set(slot).size !== slot.length) return 'The same exercise cannot be twice in one slot'
   }
@@ -42,10 +54,7 @@ export function validateDayInput(input: DayInput): string | null {
  * Least recently completed wins; never-completed beats everything. Ties keep
  * slot order, so a brand new slot starts with its first alternative.
  */
-export function pickAlternative(
-  exerciseIds: number[],
-  lastCompleted: Map<number, string>
-): number {
+export function pickAlternative(exerciseIds: number[], lastCompleted: Map<number, string>): number {
   let best = exerciseIds[0]
   let bestAt = lastCompleted.get(best)
   for (const id of exerciseIds.slice(1)) {

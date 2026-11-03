@@ -1,5 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import { CheckIcon, PauseIcon, PlayIcon, SkipForwardIcon, SquareIcon } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  CheckIcon,
+  MusicIcon,
+  PauseIcon,
+  PlayIcon,
+  SkipForwardIcon,
+  SquareIcon
+} from 'lucide-react'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,7 +32,7 @@ import { useMetronome } from '@/hooks/useMetronome'
 import { playFinishChime } from '@/lib/sounds'
 import { AudioPanel } from './AudioPanel'
 import { MetronomePanel } from './MetronomePanel'
-import { formatDuration } from '../../../../shared/exercise'
+import { formatDuration, formatMaybeDuration } from '../../../../shared/exercise'
 import type { Day, Slot, SlotExercise } from '../../../../shared/day'
 import type { LogStatus } from '../../../../shared/session'
 import { WEEKDAY_LABELS, weekdayOf, type WeekScheduleEntry } from '../../../../shared/week'
@@ -75,7 +82,11 @@ export function PracticeScreen({
   const scheduledDay = days?.find((d) => d.id === scheduledId) ?? null
   const [chosenId, setChosenId] = useState<number | null | undefined>(undefined) // undefined = follow schedule
   const selectedId = chosenId === undefined ? scheduledId : chosenId
-  const liveDay = days?.find((d) => d.id === selectedId) ?? null
+  // A Song slot is empty while there are no songs; there's nothing to play there.
+  const liveDay = useMemo(() => {
+    const d = days?.find((d) => d.id === selectedId)
+    return d ? { ...d, slots: d.slots.filter((s) => s.exercises.length > 0) } : null
+  }, [days, selectedId])
 
   // ---- session state ----
   const [run, setRun] = useState<Run | null>(null)
@@ -94,6 +105,8 @@ export function PracticeScreen({
     ? (slot.exercises.find((e) => e.id === pickedId) ?? preselected(slot))
     : undefined
   const bpmValue = bpmText ?? (picked?.bpm != null ? String(picked.bpm) : '')
+  /** Songs have no allocated time: the clock counts up and Done finishes them. */
+  const untimed = picked?.allocatedSeconds === null
 
   // ---- clock ----
   const elapsedRef = useRef(0)
@@ -215,13 +228,16 @@ export function PracticeScreen({
           : status === 'completed' && Number.isInteger(typed) && typed > 0
             ? typed
             : ex.bpm
+      // Untimed (songs): credit the time actually played, if any.
+      const played = Math.round(elapsedRef.current / 1000)
       await window.api.sessions.log({
         sessionId: r.sessionId,
         exerciseId: ex.id,
         exerciseName: ex.name,
         status,
         bpm,
-        secondsAllocated: ex.allocatedSeconds
+        secondsAllocated:
+          ex.allocatedSeconds ?? (status === 'completed' && played > 0 ? played : null)
       })
       if (status === 'completed') playFinishChime()
 
@@ -259,7 +275,7 @@ export function PracticeScreen({
   // The clock only advances while there's sound (or within the hold after it).
   const advanceRef = useRef(logAndAdvance)
   advanceRef.current = logAndAdvance
-  const allocatedMs = (picked?.allocatedSeconds ?? 0) * 1000
+  const allocatedMs = picked?.allocatedSeconds != null ? picked.allocatedSeconds * 1000 : null
   const allocatedRef = useRef(allocatedMs)
   allocatedRef.current = allocatedMs
   const noMicRef = useRef(false)
@@ -281,7 +297,9 @@ export function PracticeScreen({
       if (!counting) return
       elapsedRef.current += dt
       setElapsedMs(elapsedRef.current)
-      if (elapsedRef.current >= allocatedRef.current) advanceRef.current('completed')
+      if (allocatedRef.current !== null && elapsedRef.current >= allocatedRef.current) {
+        advanceRef.current('completed')
+      }
     }, 100)
     return () => clearInterval(timer)
   }, [phase, index, audio.lastAboveRef])
@@ -345,7 +363,11 @@ export function PracticeScreen({
   }
 
   const name = settings?.[SETTING.userName]
-  const remainingMs = Math.max(0, allocatedMs - elapsedMs)
+  // Counts down for exercises, up for songs.
+  const clockSeconds =
+    allocatedMs === null
+      ? Math.floor(elapsedMs / 1000)
+      : Math.ceil(Math.max(0, allocatedMs - elapsedMs) / 1000)
   const dayItems = [
     { value: NO_DAY, label: 'Rest day' },
     ...(days ?? []).map((d) => ({ value: String(d.id), label: d.name }))
@@ -354,13 +376,14 @@ export function PracticeScreen({
     s.exercises.find((e) => e.id === results[i]?.exerciseId) ??
     (i === index && picked ? picked : preselected(s))
   const totalSeconds =
-    day?.slots.reduce((sum, s, i) => sum + choiceFor(i, s).allocatedSeconds, 0) ?? 0
+    day?.slots.reduce((sum, s, i) => sum + (choiceFor(i, s).allocatedSeconds ?? 0), 0) ?? 0
+  const hasSongs = !!day?.slots.some((s) => s.song)
   // What's still ahead today: unlogged slots, minus what's already played of the current one.
   const leftSeconds =
     (day?.slots.reduce(
-      (sum, s, i) => (results[i] ? sum : sum + choiceFor(i, s).allocatedSeconds),
+      (sum, s, i) => (results[i] ? sum : sum + (choiceFor(i, s).allocatedSeconds ?? 0)),
       0
-    ) ?? 0) - Math.floor(elapsedMs / 1000)
+    ) ?? 0) - (untimed ? 0 : Math.floor(elapsedMs / 1000))
 
   return (
     <div className="flex w-full flex-col gap-6 p-6 md:h-full xl:gap-8 xl:px-10">
@@ -473,9 +496,9 @@ export function PracticeScreen({
                       (paused || clockState === 'waiting') &&
                       'text-muted-foreground'
                   )}
-                  aria-label="Time remaining"
+                  aria-label={untimed ? 'Time played' : 'Time remaining'}
                 >
-                  {formatDuration(Math.ceil(remainingMs / 1000))}
+                  {formatDuration(clockSeconds)}
                 </div>
 
                 <p className="h-5 text-sm text-muted-foreground" aria-live="polite">
@@ -519,6 +542,11 @@ export function PracticeScreen({
                     </label>
                   ) : (
                     <span className="text-sm text-muted-foreground">No BPM</span>
+                  )}
+                  {untimed && phase === 'running' && (
+                    <Button onClick={() => logAndAdvance('completed')}>
+                      <CheckIcon /> Done
+                    </Button>
                   )}
                   <Button variant="ghost" onClick={() => logAndAdvance('skipped')}>
                     <SkipForwardIcon /> Skip
@@ -568,6 +596,7 @@ export function PracticeScreen({
                     </>
                   )}
                   {formatDuration(totalSeconds)}
+                  {hasSongs && ' + songs'}
                 </span>
               </div>
               <ol className="flex flex-col gap-1 md:min-h-0 md:overflow-y-auto">
@@ -602,22 +631,29 @@ export function PracticeScreen({
                           result?.status === 'skipped' && 'line-through'
                         )}
                       >
-                        {s.exercises.map((e, j) => (
-                          <span key={e.id}>
-                            {j > 0 && <span className="text-muted-foreground"> / </span>}
-                            <span
-                              className={cn(
-                                s.exercises.length > 1 &&
-                                  (e.id === chosen.id ? 'font-medium' : 'text-muted-foreground')
-                              )}
-                            >
-                              {e.name}
-                            </span>
+                        {s.song && (
+                          <span className="inline-flex items-center gap-1.5">
+                            <MusicIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                            {chosen.name}
                           </span>
-                        ))}
+                        )}
+                        {!s.song &&
+                          s.exercises.map((e, j) => (
+                            <span key={e.id}>
+                              {j > 0 && <span className="text-muted-foreground"> / </span>}
+                              <span
+                                className={cn(
+                                  s.exercises.length > 1 &&
+                                    (e.id === chosen.id ? 'font-medium' : 'text-muted-foreground')
+                                )}
+                              >
+                                {e.name}
+                              </span>
+                            </span>
+                          ))}
                       </span>
                       <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                        {formatDuration(chosen.allocatedSeconds)}
+                        {formatMaybeDuration(chosen.allocatedSeconds)}
                       </span>
                     </li>
                   )

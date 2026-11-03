@@ -6,5 +6,6 @@ export interface ExerciseLogInput {
   exerciseName: string
   status: LogStatus
   bpm: number | null
-  secondsAllocated: number
+  /** Allocated time; for songs, the seconds actually played (null if none/unknown). */
+  secondsAllocated: number | null
 }

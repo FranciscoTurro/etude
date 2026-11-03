@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { GripVerticalIcon, PlusIcon, XIcon } from 'lucide-react'
+import { GripVerticalIcon, MusicIcon, PlusIcon, XIcon } from 'lucide-react'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,14 +13,17 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatDuration, type Exercise } from '../../../../shared/exercise'
-import { validateDayInput, type Day } from '../../../../shared/day'
+import { SONG_SLOT, validateDayInput, type Day } from '../../../../shared/day'
 import {
   addToSlot,
   effectiveId,
   insertSlot,
+  insertSongSlot,
   makeSlot,
+  makeSongSlot,
   moveSlot,
   removeExercise,
+  removeSlot,
   type DraftSlot
 } from './slotDraft'
 
@@ -28,23 +31,32 @@ interface Props {
   open: boolean
   /** null = create a new day */
   day: Day | null
+  /** Plain exercises only: songs come in through a Song slot */
   exercises: Exercise[]
   onOpenChange: (open: boolean) => void
   onSaved: () => void
 }
 
-export function DayEditorDialog({ open, day, exercises, onOpenChange, onSaved }: Props): React.JSX.Element {
+export function DayEditorDialog({
+  open,
+  day,
+  exercises,
+  onOpenChange,
+  onSaved
+}: Props): React.JSX.Element {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
         <DialogHeader>
           <DialogTitle>{day ? 'Edit day' : 'New day'}</DialogTitle>
           <DialogDescription>
-            Drag an exercise onto a slot to add it as an alternative, or between slots to give it its
-            own slot.
+            Drag an exercise onto a slot to add it as an alternative, or between slots to give it
+            its own slot.
           </DialogDescription>
         </DialogHeader>
-        {open && <DayEditor key={day?.id ?? 'new'} day={day} exercises={exercises} onSaved={onSaved} />}
+        {open && (
+          <DayEditor key={day?.id ?? 'new'} day={day} exercises={exercises} onSaved={onSaved} />
+        )}
       </DialogContent>
     </Dialog>
   )
@@ -53,6 +65,7 @@ export function DayEditorDialog({ open, day, exercises, onOpenChange, onSaved }:
 /** What's being dragged. Kept in a ref: dataTransfer can't be read during dragover. */
 type Drag =
   | { kind: 'exercise'; exerciseId: number; fromSlot?: string }
+  | { kind: 'song' }
   | { kind: 'slot'; slotKey: string }
 
 function DayEditor({
@@ -66,7 +79,15 @@ function DayEditor({
 }): React.JSX.Element {
   const [name, setName] = useState(day?.name ?? '')
   const [slots, setSlots] = useState<DraftSlot[]>(
-    () => day?.slots.map((s) => makeSlot(s.exercises.map((e) => e.id), s.preselectedId)) ?? []
+    () =>
+      day?.slots.map((s) =>
+        s.song
+          ? makeSongSlot()
+          : makeSlot(
+              s.exercises.map((e) => e.id),
+              s.preselectedId ?? undefined
+            )
+      ) ?? []
   )
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -75,7 +96,11 @@ function DayEditor({
   const drag = useRef<Drag | null>(null)
 
   const byId = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises])
-  const totalSeconds = slots.reduce((sum, s) => sum + (byId.get(effectiveId(s))?.allocatedSeconds ?? 0), 0)
+  const totalSeconds = slots.reduce((sum, s) => {
+    const id = effectiveId(s)
+    return sum + ((id !== undefined && byId.get(id)?.allocatedSeconds) || 0)
+  }, 0)
+  const hasSongs = slots.some((s) => s.song)
 
   function startDrag(e: React.DragEvent, d: Drag): void {
     drag.current = d
@@ -101,7 +126,8 @@ function DayEditor({
         if (over !== id) setOver(id)
       },
       onDragLeave: (e: React.DragEvent) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver((o) => (o === id ? null : o))
+        if (!e.currentTarget.contains(e.relatedTarget as Node))
+          setOver((o) => (o === id ? null : o))
       },
       onDrop: (e: React.DragEvent) => {
         e.preventDefault()
@@ -118,13 +144,17 @@ function DayEditor({
       () => true,
       (d) =>
         setSlots((s) =>
-          d.kind === 'slot' ? moveSlot(s, d.slotKey, at) : insertSlot(s, at, d.exerciseId, d.fromSlot)
+          d.kind === 'slot'
+            ? moveSlot(s, d.slotKey, at)
+            : d.kind === 'song'
+              ? insertSongSlot(s, at)
+              : insertSlot(s, at, d.exerciseId, d.fromSlot)
         )
     )
 
   async function save(e: React.FormEvent): Promise<void> {
     e.preventDefault()
-    const input = { name, slots: slots.map((s) => s.exerciseIds) }
+    const input = { name, slots: slots.map((s) => (s.song ? SONG_SLOT : s.exerciseIds)) }
     const invalid = validateDayInput(input)
     if (invalid) return setError(invalid)
     setSaving(true)
@@ -157,6 +187,27 @@ function DayEditor({
         <div className="flex min-h-0 flex-col gap-2">
           <Label>Exercises</Label>
           <ul className="flex max-h-[60vh] flex-col gap-1 overflow-y-auto rounded-lg border p-1.5">
+            <li
+              draggable
+              onDragStart={(e) => startDrag(e, { kind: 'song' })}
+              onDragEnd={endDrag}
+              title="Rotates through every song in the Songs tab, least recently played first"
+              className="group flex cursor-grab items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted active:cursor-grabbing"
+            >
+              <GripVerticalIcon className="size-3.5 shrink-0 text-muted-foreground" />
+              <MusicIcon className="size-3.5 shrink-0" />
+              <span className="min-w-0 flex-1 truncate">Song</span>
+              <span className="text-xs text-muted-foreground">untimed</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                title="Add as new slot"
+                onClick={() => setSlots((s) => insertSongSlot(s, s.length))}
+              >
+                <PlusIcon />
+              </Button>
+            </li>
             {exercises.map((ex) => (
               <li
                 key={ex.id}
@@ -168,7 +219,7 @@ function DayEditor({
                 <GripVerticalIcon className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">{ex.name}</span>
                 <span className="text-xs text-muted-foreground tabular-nums">
-                  {formatDuration(ex.allocatedSeconds)}
+                  {formatDuration(ex.allocatedSeconds ?? 0)}
                 </span>
                 <Button
                   type="button"
@@ -190,6 +241,7 @@ function DayEditor({
             <Label>Slots</Label>
             <span className="text-xs text-muted-foreground tabular-nums">
               Total {formatDuration(totalSeconds)}
+              {hasSongs && ' + songs'}
             </span>
           </div>
           <div className="flex max-h-[60vh] min-h-40 flex-col overflow-y-auto rounded-lg border p-1.5">
@@ -215,6 +267,7 @@ function DayEditor({
                         {...dropTarget(
                           targetId,
                           (d) =>
+                            !slot.song &&
                             d.kind === 'exercise' &&
                             d.fromSlot !== slot.key &&
                             !slot.exerciseIds.includes(d.exerciseId),
@@ -239,7 +292,29 @@ function DayEditor({
                           {i + 1}
                         </span>
                         <div className="flex min-w-0 flex-1 flex-col gap-1">
-                          <div className="flex flex-wrap gap-1">
+                          {slot.song && (
+                            <>
+                              <div className="flex flex-wrap gap-1">
+                                <span className="inline-flex items-center gap-1 rounded-md bg-muted py-0.5 pr-0.5 pl-2 text-sm">
+                                  <MusicIcon className="size-3.5" />
+                                  Song
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    title="Remove"
+                                    onClick={() => setSlots((s) => removeSlot(s, slot.key))}
+                                  >
+                                    <XIcon />
+                                  </Button>
+                                </span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                Any song: the least recently played one comes up first
+                              </span>
+                            </>
+                          )}
+                          <div className={cn('flex flex-wrap gap-1', slot.song && 'hidden')}>
                             {slot.exerciseIds.map((id) => {
                               const ex = byId.get(id)
                               return (
@@ -248,7 +323,11 @@ function DayEditor({
                                   draggable
                                   onDragStart={(e) => {
                                     e.stopPropagation()
-                                    startDrag(e, { kind: 'exercise', exerciseId: id, fromSlot: slot.key })
+                                    startDrag(e, {
+                                      kind: 'exercise',
+                                      exerciseId: id,
+                                      fromSlot: slot.key
+                                    })
                                   }}
                                   onDragEnd={endDrag}
                                   className={cn(
@@ -261,7 +340,7 @@ function DayEditor({
                                 >
                                   {ex?.name ?? `#${id}`}
                                   <span className="text-xs text-muted-foreground tabular-nums">
-                                    {ex && formatDuration(ex.allocatedSeconds)}
+                                    {ex && formatDuration(ex.allocatedSeconds ?? 0)}
                                   </span>
                                   <Button
                                     type="button"

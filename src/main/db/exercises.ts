@@ -1,18 +1,25 @@
 import { getDb } from './index'
-import { validateExerciseInput, type Exercise, type ExerciseInput } from '../../shared/exercise'
+import {
+  validateExerciseInput,
+  type Exercise,
+  type ExerciseInput,
+  type ExerciseKind
+} from '../../shared/exercise'
 
 interface ExerciseRow {
   id: number
+  kind: ExerciseKind
   name: string
   description: string
   bpm: number | null
-  allocated_seconds: number
+  allocated_seconds: number | null
   created_at: string
   updated_at: string
 }
 
 const toExercise = (r: ExerciseRow): Exercise => ({
   id: r.id,
+  kind: r.kind,
   name: r.name,
   description: r.description,
   bpm: r.bpm,
@@ -29,7 +36,8 @@ function clean(input: ExerciseInput): ExerciseInput {
 }
 
 function get(id: number): Exercise {
-  const row = getDb().prepare('SELECT * FROM Exercise WHERE id = ?').get(id) as ExerciseRow | undefined
+  const row = getDb().prepare('SELECT * FROM Exercise WHERE id = ?').get(id) as
+    ExerciseRow | undefined
   if (!row) throw new Error(`Exercise ${id} not found`)
   return toExercise(row)
 }
@@ -45,20 +53,21 @@ export function createExercise(input: ExerciseInput): Exercise {
   const e = clean(input)
   const { lastInsertRowid } = getDb()
     .prepare(
-      'INSERT INTO Exercise (name, description, bpm, allocated_seconds) VALUES (?, ?, ?, ?)'
+      'INSERT INTO Exercise (kind, name, description, bpm, allocated_seconds) VALUES (?, ?, ?, ?, ?)'
     )
-    .run(e.name, e.description, e.bpm, e.allocatedSeconds)
+    .run(e.kind, e.name, e.description, e.bpm, e.allocatedSeconds)
   return get(Number(lastInsertRowid))
 }
 
+/** The kind can't change: a song slot and an exercise slot aren't interchangeable. */
 export function updateExercise(id: number, input: ExerciseInput): Exercise {
   const e = clean(input)
-  const { changes } = getDb()
+  if (get(id).kind !== e.kind) throw new Error("An exercise can't become a song, or the other way")
+  getDb()
     .prepare(
       'UPDATE Exercise SET name = ?, description = ?, bpm = ?, allocated_seconds = ? WHERE id = ?'
     )
     .run(e.name, e.description, e.bpm, e.allocatedSeconds, id)
-  if (!changes) throw new Error(`Exercise ${id} not found`)
   return get(id)
 }
 
@@ -66,6 +75,7 @@ export function updateExercise(id: number, input: ExerciseInput): Exercise {
 export function duplicateExercise(id: number): Exercise {
   const src = get(id)
   return createExercise({
+    kind: src.kind,
     name: `${src.name} (copy)`,
     description: src.description,
     bpm: src.bpm,

@@ -1,4 +1,5 @@
 import type { LogStatus } from './session'
+import type { ExerciseKind } from './exercise'
 
 export interface HistoryLog {
   id: number
@@ -6,7 +7,7 @@ export interface HistoryLog {
   exerciseName: string
   status: LogStatus
   bpm: number | null
-  secondsAllocated: number
+  secondsAllocated: number | null
   loggedAt: string
 }
 
@@ -28,6 +29,8 @@ export interface GraphableExercise {
   exerciseId: number
   /** Current name, or the most recent logged name if the exercise was deleted */
   name: string
+  /** Deleted ones have no row left to tell, so they count as exercises */
+  kind: ExerciseKind
   deleted: boolean
   lastPracticed: string
 }

@@ -1,16 +1,22 @@
 import type Database from 'better-sqlite3'
 import { initial } from './001_initial'
 import { dropAttachment } from './002_drop_attachment'
+import { songs } from './003_songs'
 
 export interface Migration {
   /** Target PRAGMA user_version after this migration runs. Must be sequential, starting at 1. */
   version: number
   name: string
   up: string | ((db: Database.Database) => void)
+  /**
+   * Run with foreign keys off, for migrations that rebuild a table other tables point at
+   * (dropping it would otherwise cascade). References are checked before commit.
+   */
+  foreignKeysOff?: boolean
 }
 
 // Append new migrations here. Never edit one that has shipped.
-export const migrations: Migration[] = [initial, dropAttachment]
+export const migrations: Migration[] = [initial, dropAttachment, songs]
 
 export const LATEST_SCHEMA_VERSION = migrations.length
 
@@ -21,7 +27,8 @@ export const LATEST_SCHEMA_VERSION = migrations.length
  */
 export function migrate(db: Database.Database): void {
   migrations.forEach((m, i) => {
-    if (m.version !== i + 1) throw new Error(`Migration ${m.name} has version ${m.version}, expected ${i + 1}`)
+    if (m.version !== i + 1)
+      throw new Error(`Migration ${m.name} has version ${m.version}, expected ${i + 1}`)
   })
 
   const current = db.pragma('user_version', { simple: true }) as number
@@ -32,10 +39,20 @@ export function migrate(db: Database.Database): void {
   }
 
   for (const m of migrations.slice(current)) {
-    db.transaction(() => {
-      if (typeof m.up === 'string') db.exec(m.up)
-      else m.up(db)
-      db.pragma(`user_version = ${m.version}`)
-    })()
+    // foreign_keys can't change inside a transaction, so it's toggled around it.
+    const fkWasOn = db.pragma('foreign_keys', { simple: true }) === 1
+    if (m.foreignKeysOff) db.pragma('foreign_keys = OFF')
+    try {
+      db.transaction(() => {
+        if (typeof m.up === 'string') db.exec(m.up)
+        else m.up(db)
+        if (m.foreignKeysOff && (db.pragma('foreign_key_check') as unknown[]).length) {
+          throw new Error(`Migration ${m.name} left broken references between tables`)
+        }
+        db.pragma(`user_version = ${m.version}`)
+      })()
+    } finally {
+      if (m.foreignKeysOff && fkWasOn) db.pragma('foreign_keys = ON')
+    }
   }
 }

@@ -2,6 +2,7 @@ import { getDb } from './index'
 import { WEEKDAYS, weekdayOf } from '../../shared/week'
 import type { BpmGain, ExerciseStat, PeriodTotals, Stats } from '../../shared/stats'
 import type { LogStatus } from '../../shared/session'
+import { SETTING } from '../../shared/settings'
 
 interface SessionRow {
   id: number
@@ -18,7 +19,8 @@ interface LogRow {
   exercise_name: string
   status: LogStatus
   bpm: number | null
-  seconds_allocated: number
+  /** null for songs played without timing (e.g. imported history) */
+  seconds_allocated: number | null
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0')
@@ -48,6 +50,12 @@ export function getStats(now = new Date()): Stats {
        ORDER BY l.logged_at, l.id`
     )
     .all() as LogRow[]
+  const sinceRow = db
+    .prepare('SELECT value FROM Setting WHERE key = ?')
+    .pluck()
+    .get(SETTING.recordsSince) as string | undefined
+  const since = sinceRow && /^\d{4}-\d{2}-\d{2}$/.test(sinceRow) ? sinceRow : null
+  const counts = (date: string): boolean => since === null || date >= since
   const liveNames = new Map(
     (db.prepare('SELECT id, name FROM Exercise').all() as { id: number; name: string }[]).map(
       (e) => [e.id, e.name]
@@ -72,7 +80,7 @@ export function getStats(now = new Date()): Stats {
       daysPracticed: new Set(done.map((l) => l.date)).size,
       completed: done.length,
       skipped: ls.length - done.length,
-      practiceSeconds: done.reduce((sum, l) => sum + l.seconds_allocated, 0)
+      practiceSeconds: done.reduce((sum, l) => sum + (l.seconds_allocated ?? 0), 0)
     }
   }
 
@@ -80,16 +88,19 @@ export function getStats(now = new Date()): Stats {
   const perDate = new Map<string, number>()
   for (const l of logs) {
     if (l.status !== 'completed') continue
-    perDate.set(l.date, (perDate.get(l.date) ?? 0) + l.seconds_allocated)
+    perDate.set(l.date, (perDate.get(l.date) ?? 0) + (l.seconds_allocated ?? 0))
   }
   const practicedDates = [...perDate.keys()].sort()
+  // Streaks and records only look at practice since the cut-off.
+  const recordDates = practicedDates.filter(counts)
+  const recordSessions = sessions.filter((s) => counts(s.date))
 
   // ---- streaks ----
   let longest: Stats['longestStreak'] = null
   let runStart = ''
   let runLen = 0
   let prev: string | null = null
-  for (const d of practicedDates) {
+  for (const d of recordDates) {
     const consecutive = prev !== null && toLocalDate(addDays(parseLocalDate(prev), 1)) === d
     if (consecutive) runLen++
     else {
@@ -101,17 +112,18 @@ export function getStats(now = new Date()): Stats {
   }
   let currentStreak = 0
   let cursor = perDate.has(toLocalDate(today)) ? today : addDays(today, -1)
-  while (perDate.has(toLocalDate(cursor))) {
+  while (perDate.has(toLocalDate(cursor)) && counts(toLocalDate(cursor))) {
     currentStreak++
     cursor = addDays(cursor, -1)
   }
 
   // ---- records ----
   let bestDay: Stats['bestDay'] = null
-  for (const [date, secs] of perDate) {
+  for (const date of recordDates) {
+    const secs = perDate.get(date)!
     if (!bestDay || secs > bestDay.practiceSeconds) bestDay = { date, practiceSeconds: secs }
   }
-  const finished = sessions
+  const finished = recordSessions
     .filter((s) => s.finished_at)
     .map((s) => ({
       s,
@@ -156,7 +168,7 @@ export function getStats(now = new Date()): Stats {
   }
 
   const dayCounts = new Map<string, number>()
-  for (const s of sessions) dayCounts.set(s.day_name, (dayCounts.get(s.day_name) ?? 0) + 1)
+  for (const s of recordSessions) dayCounts.set(s.day_name, (dayCounts.get(s.day_name) ?? 0) + 1)
   const topDays = [...dayCounts]
     .map(([name, n]) => ({ name, sessions: n }))
     .sort((a, b) => b.sessions - a.sessions)
@@ -179,7 +191,7 @@ export function getStats(now = new Date()): Stats {
     e.name = name
     if (l.status === 'completed') {
       e.completed++
-      e.practiceSeconds += l.seconds_allocated
+      e.practiceSeconds += l.seconds_allocated ?? 0
     } else e.skipped++
     perExercise.set(l.exercise_id, e)
 
@@ -212,6 +224,8 @@ export function getStats(now = new Date()): Stats {
     month: totals(monthStart, tomorrow),
     year: totals(yearStart, tomorrow),
     allTime: totals(null, tomorrow),
+    recordsSince: since,
+    sinceCutoff: totals(since ? parseLocalDate(since) : null, tomorrow),
     lastWeek: totals(addDays(weekStart, -7), weekStart),
     lastMonth: totals(new Date(today.getFullYear(), today.getMonth() - 1, 1), monthStart),
     lastYear: totals(new Date(today.getFullYear() - 1, 0, 1), yearStart),

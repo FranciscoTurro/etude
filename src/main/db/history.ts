@@ -1,5 +1,6 @@
 import { getDb } from './index'
 import type { LogStatus } from '../../shared/session'
+import type { ExerciseKind } from '../../shared/exercise'
 import type {
   BpmPoint,
   GraphableExercise,
@@ -55,7 +56,7 @@ export function getSession(id: number): HistorySession | null {
     exercise_name: string
     status: LogStatus
     bpm: number | null
-    seconds_allocated: number
+    seconds_allocated: number | null
     logged_at: string
   }[]
   return {
@@ -83,15 +84,22 @@ export function listGraphableExercises(): GraphableExercise[] {
          WHERE status = 'completed' AND bpm IS NOT NULL
        )
        SELECT r.exercise_id, COALESCE(e.name, r.exercise_name) AS name,
-              e.id IS NULL AS deleted, r.logged_at
+              COALESCE(e.kind, 'exercise') AS kind, e.id IS NULL AS deleted, r.logged_at
        FROM ranked r LEFT JOIN Exercise e ON e.id = r.exercise_id
        WHERE r.rn = 1
        ORDER BY r.logged_at DESC`
     )
-    .all() as { exercise_id: number; name: string; deleted: number; logged_at: string }[]
+    .all() as {
+    exercise_id: number
+    name: string
+    kind: ExerciseKind
+    deleted: number
+    logged_at: string
+  }[]
   return rows.map((r) => ({
     exerciseId: r.exercise_id,
     name: r.name,
+    kind: r.kind,
     deleted: r.deleted === 1,
     lastPracticed: r.logged_at
   }))

@@ -31,7 +31,10 @@ const SLOT_ROW_PX = 24
 /** Card padding top + bottom and the header/content gap (3 x --card-spacing), in px. */
 const CARD_CHROME_PX = 48
 
-const slotLabel = (slot: Slot): string => slot.exercises.map((e) => e.name).join(' / ')
+const slotLabel = (slot: Slot): string =>
+  slot.song
+    ? `Song: ${slot.exercises.find((e) => e.id === slot.preselectedId)?.name ?? 'none yet'}`
+    : slot.exercises.map((e) => e.name).join(' / ')
 
 interface Props {
   /** Library section switcher, shown as this panel's title */
@@ -214,22 +217,24 @@ function DayCard({
                     {i + 1}.
                   </span>
                   <span className="min-w-0 truncate">
-                    {slot.exercises.map((e, j) => (
-                      <span key={e.id}>
-                        {j > 0 && <span className="text-muted-foreground"> / </span>}
-                        <span
-                          className={
-                            slot.exercises.length > 1 && e.id === slot.preselectedId
-                              ? 'font-medium'
-                              : slot.exercises.length > 1
-                                ? 'text-muted-foreground'
-                                : undefined
-                          }
-                        >
-                          {e.name}
+                    {slot.song && slotLabel(slot)}
+                    {!slot.song &&
+                      slot.exercises.map((e, j) => (
+                        <span key={e.id}>
+                          {j > 0 && <span className="text-muted-foreground"> / </span>}
+                          <span
+                            className={
+                              slot.exercises.length > 1 && e.id === slot.preselectedId
+                                ? 'font-medium'
+                                : slot.exercises.length > 1
+                                  ? 'text-muted-foreground'
+                                  : undefined
+                            }
+                          >
+                            {e.name}
+                          </span>
                         </span>
-                      </span>
-                    ))}
+                      ))}
                   </span>
                 </li>
               ))}

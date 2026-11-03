@@ -11,7 +11,13 @@ export const SETTING = {
   /** '1' | '0'. When on, the clock only runs while there's sound. Missing = on. */
   clockListens: 'clock_listens',
   /** 'light' | 'dark'. Missing = follow the OS. */
-  theme: 'theme'
+  theme: 'theme',
+  /**
+   * Local 'YYYY-MM-DD'. Streaks, records and the completion/average-session figures only
+   * count practice from this date on (earlier history was imported, its timings estimated).
+   * Missing = all history counts.
+   */
+  recordsSince: 'records_since'
 } as const
 
 export type Theme = 'light' | 'dark'

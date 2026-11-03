@@ -4,6 +4,8 @@
 
 export interface DraftSlot {
   key: string
+  /** A Song slot holds no ids: it's filled with every song when the day loads. */
+  song?: boolean
   exerciseIds: number[]
   /** Carried over from the saved day so the editor total matches the list. */
   preselectedId?: number
@@ -18,7 +20,10 @@ export const makeSlot = (exerciseIds: number[], preselectedId?: number): DraftSl
   preselectedId
 })
 
-const tidy = (slots: DraftSlot[]): DraftSlot[] => slots.filter((s) => s.exerciseIds.length > 0)
+export const makeSongSlot = (): DraftSlot => ({ key: newKey(), song: true, exerciseIds: [] })
+
+const tidy = (slots: DraftSlot[]): DraftSlot[] =>
+  slots.filter((s) => s.song || s.exerciseIds.length > 0)
 
 function withoutExercise(slots: DraftSlot[], slotKey: string, exerciseId: number): DraftSlot[] {
   return slots.map((s) =>
@@ -27,7 +32,11 @@ function withoutExercise(slots: DraftSlot[], slotKey: string, exerciseId: number
 }
 
 /** Remove one exercise from a slot. */
-export function removeExercise(slots: DraftSlot[], slotKey: string, exerciseId: number): DraftSlot[] {
+export function removeExercise(
+  slots: DraftSlot[],
+  slotKey: string,
+  exerciseId: number
+): DraftSlot[] {
   return tidy(withoutExercise(slots, slotKey, exerciseId))
 }
 
@@ -43,10 +52,12 @@ export function addToSlot(
 ): DraftSlot[] {
   if (from === targetKey) return slots
   const target = slots.find((s) => s.key === targetKey)
-  if (!target || target.exerciseIds.includes(exerciseId)) return slots
+  if (!target || target.song || target.exerciseIds.includes(exerciseId)) return slots
   const moved = from ? withoutExercise(slots, from, exerciseId) : slots
   return tidy(
-    moved.map((s) => (s.key === targetKey ? { ...s, exerciseIds: [...s.exerciseIds, exerciseId] } : s))
+    moved.map((s) =>
+      s.key === targetKey ? { ...s, exerciseIds: [...s.exerciseIds, exerciseId] } : s
+    )
   )
 }
 
@@ -62,6 +73,17 @@ export function insertSlot(
   return tidy(base)
 }
 
+/** Insert a Song slot before index `at`. */
+export function insertSongSlot(slots: DraftSlot[], at: number): DraftSlot[] {
+  const next = slots.slice()
+  next.splice(at, 0, makeSongSlot())
+  return next
+}
+
+/** Remove a whole slot. */
+export const removeSlot = (slots: DraftSlot[], slotKey: string): DraftSlot[] =>
+  slots.filter((s) => s.key !== slotKey)
+
 /** Move a whole slot so it lands before index `to`. */
 export function moveSlot(slots: DraftSlot[], slotKey: string, to: number): DraftSlot[] {
   const from = slots.findIndex((s) => s.key === slotKey)
@@ -73,7 +95,7 @@ export function moveSlot(slots: DraftSlot[], slotKey: string, to: number): Draft
 }
 
 /** What play would pick: the saved preselection if it's still there, else the first. */
-export const effectiveId = (s: DraftSlot): number =>
+export const effectiveId = (s: DraftSlot): number | undefined =>
   s.preselectedId !== undefined && s.exerciseIds.includes(s.preselectedId)
     ? s.preselectedId
     : s.exerciseIds[0]

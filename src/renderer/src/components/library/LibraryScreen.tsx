@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { cn } from 'cn'
 import { WeekPanel } from '@/components/week/WeekPanel'
 import { ExercisesPanel } from '@/components/exercises/ExercisesPanel'
@@ -7,7 +7,7 @@ import type { Exercise } from '../../../../shared/exercise'
 import type { Day } from '../../../../shared/day'
 import type { WeekScheduleEntry } from '../../../../shared/week'
 
-type Section = 'days' | 'exercises'
+type Section = 'days' | 'exercises' | 'songs'
 
 interface Props {
   exercises: Exercise[] | null
@@ -16,13 +16,23 @@ interface Props {
   onChanged: () => void
 }
 
-/** Week strip on top; below it, days or exercises as a paged grid that never scrolls. */
+/** Week strip on top; below it, days, exercises or songs as a paged grid that never scrolls. */
 export function LibraryScreen({ exercises, days, week, onChanged }: Props): React.JSX.Element {
   const [section, setSection] = useState<Section>('days')
+  const [plain, songs] = useMemo(
+    () =>
+      exercises
+        ? [
+            exercises.filter((e) => e.kind === 'exercise'),
+            exercises.filter((e) => e.kind === 'song')
+          ]
+        : [null, null],
+    [exercises]
+  )
 
   const tabs = (
     <div className="flex rounded-lg border p-0.5" role="tablist" aria-label="Library section">
-      {(['days', 'exercises'] as const).map((s) => (
+      {(['days', 'exercises', 'songs'] as const).map((s) => (
         <button
           key={s}
           role="tab"
@@ -49,11 +59,17 @@ export function LibraryScreen({ exercises, days, week, onChanged }: Props): Reac
           tabs={tabs}
           days={days}
           week={week ?? []}
-          exercises={exercises ?? []}
+          exercises={plain ?? []}
           onChanged={onChanged}
         />
       ) : (
-        <ExercisesPanel tabs={tabs} exercises={exercises} onChanged={onChanged} />
+        <ExercisesPanel
+          key={section}
+          kind={section === 'songs' ? 'song' : 'exercise'}
+          tabs={tabs}
+          exercises={section === 'songs' ? songs : plain}
+          onChanged={onChanged}
+        />
       )}
     </div>
   )

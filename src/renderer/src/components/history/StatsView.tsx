@@ -34,7 +34,10 @@ export function StatsView({ visible }: { visible: boolean }): React.JSX.Element 
   }
 
   const all = stats.allTime
-  const logged = all.completed + all.skipped
+  // Streaks, records and these two figures only count practice since the cut-off.
+  const rec = stats.sinceCutoff
+  const logged = rec.completed + rec.skipped
+  const sinceNote = stats.recordsSince ? `since ${formatLongDate(stats.recordsSince)}` : undefined
   const year = parseLocalDate(stats.today).getFullYear()
 
   return (
@@ -69,7 +72,7 @@ export function StatsView({ visible }: { visible: boolean }): React.JSX.Element 
           label="Current streak"
           value={plural(stats.currentStreak, 'day')}
           icon={stats.currentStreak > 1 ? <FlameIcon className="size-4 text-primary" /> : null}
-          note={stats.currentStreak === 0 ? 'Practice today to start one' : undefined}
+          note={stats.currentStreak === 0 ? 'Practice today to start one' : sinceNote}
         />
         <Fact
           label="Longest streak"
@@ -77,20 +80,20 @@ export function StatsView({ visible }: { visible: boolean }): React.JSX.Element 
           note={
             stats.longestStreak && stats.longestStreak.days > 1
               ? `${formatLongDate(stats.longestStreak.from)} – ${formatLongDate(stats.longestStreak.to)}`
-              : undefined
+              : sinceNote
           }
         />
         <Fact
           label="Completed"
-          value={logged ? `${Math.round((all.completed / logged) * 100)}%` : '–'}
-          note={`${all.completed} done, ${all.skipped} skipped`}
+          value={logged ? `${Math.round((rec.completed / logged) * 100)}%` : '–'}
+          note={`${rec.completed} done, ${rec.skipped} skipped${sinceNote ? ` ${sinceNote}` : ''}`}
         />
         <Fact
           label="Average session"
           value={
             stats.averageSessionSeconds !== null ? formatHours(stats.averageSessionSeconds) : '–'
           }
-          note="start to finish"
+          note={sinceNote ? `start to finish, ${sinceNote}` : 'start to finish'}
         />
       </div>
 
@@ -157,7 +160,7 @@ export function StatsView({ visible }: { visible: boolean }): React.JSX.Element 
             empty="You haven't skipped anything."
           />
         </Card>
-        <Card title="Records">
+        <Card title="Records" subtitle={sinceNote && `Counting ${sinceNote}`}>
           <ul className="flex flex-col divide-y text-sm">
             {stats.bestDay && (
               <Record
@@ -182,8 +185,8 @@ export function StatsView({ visible }: { visible: boolean }): React.JSX.Element 
             )}
             <Record
               label="Total practice"
-              value={formatHours(all.practiceSeconds)}
-              note={`${plural(all.sessions, 'session')} on ${plural(all.daysPracticed, 'day')}`}
+              value={formatHours(rec.practiceSeconds)}
+              note={`${plural(rec.sessions, 'session')} on ${plural(rec.daysPracticed, 'day')}`}
             />
           </ul>
         </Card>

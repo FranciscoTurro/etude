@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card'
-import { formatDuration, type Exercise } from '../../../../shared/exercise'
+import { formatDuration, type Exercise, type ExerciseKind } from '../../../../shared/exercise'
 import { Pager, gridStyle, useGridFit, usePages } from '@/components/library/paging'
 import { ExerciseFormDialog } from './ExerciseFormDialog'
 import { DeleteExerciseDialog } from './DeleteExerciseDialog'
@@ -18,11 +18,15 @@ import { DeleteExerciseDialog } from './DeleteExerciseDialog'
 interface Props {
   /** Library section switcher, shown as this panel's title */
   tabs: React.ReactNode
+  /** Songs share this panel: same cards, minus the allocated time. */
+  kind: ExerciseKind
+  /** Only exercises of `kind` */
   exercises: Exercise[] | null
   onChanged: () => void
 }
 
-export function ExercisesPanel({ tabs, exercises, onChanged }: Props): React.JSX.Element {
+export function ExercisesPanel({ tabs, kind, exercises, onChanged }: Props): React.JSX.Element {
+  const noun = kind === 'song' ? 'song' : 'exercise'
   const [gridRef, { cols, rows }] = useGridFit<HTMLUListElement>(300, 124)
   const { shown, page, pages, setPage } = usePages(exercises ?? [], cols * rows)
   const [formOpen, setFormOpen] = useState(false)
@@ -52,7 +56,7 @@ export function ExercisesPanel({ tabs, exercises, onChanged }: Props): React.JSX
           <div className="flex items-center gap-3">
             <Pager page={page} pages={pages} onPage={setPage} />
             <Button size="sm" onClick={openCreate}>
-              <PlusIcon /> New exercise
+              <PlusIcon /> New {noun}
             </Button>
           </div>
         )}
@@ -60,9 +64,9 @@ export function ExercisesPanel({ tabs, exercises, onChanged }: Props): React.JSX
 
       {exercises?.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed p-10 text-center">
-          <p className="text-muted-foreground">No exercises yet.</p>
+          <p className="text-muted-foreground">No {noun}s yet.</p>
           <Button onClick={openCreate}>
-            <PlusIcon /> Create an exercise
+            <PlusIcon /> Create {kind === 'song' ? 'a song' : 'an exercise'}
           </Button>
         </div>
       )}
@@ -81,10 +85,12 @@ export function ExercisesPanel({ tabs, exercises, onChanged }: Props): React.JSX
                   {exercise.name}
                 </CardTitle>
                 <CardDescription className="flex items-center gap-4">
-                  <span className="flex items-center gap-1">
-                    <TimerIcon className="size-3.5" />
-                    {formatDuration(exercise.allocatedSeconds)}
-                  </span>
+                  {exercise.allocatedSeconds !== null && (
+                    <span className="flex items-center gap-1">
+                      <TimerIcon className="size-3.5" />
+                      {formatDuration(exercise.allocatedSeconds)}
+                    </span>
+                  )}
                   <span className="flex items-center gap-1">
                     <MetronomeIcon className="size-3.5" />
                     {exercise.bpm ? `${exercise.bpm} BPM` : 'No BPM'}
@@ -132,6 +138,7 @@ export function ExercisesPanel({ tabs, exercises, onChanged }: Props): React.JSX
 
       <ExerciseFormDialog
         open={formOpen}
+        kind={kind}
         exercise={editing}
         onOpenChange={setFormOpen}
         onSaved={() => {

@@ -3,7 +3,7 @@ import { cn } from 'cn'
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, RedoIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
-import { formatDuration } from '../../../../shared/exercise'
+import { formatMaybeDuration } from '../../../../shared/exercise'
 import type { HistorySession, SessionSummary } from '../../../../shared/history'
 import { formatLongDate, formatTime, parseLocalDate, toLocalDate } from './dates'
 
@@ -170,7 +170,7 @@ function SessionCard({ session: s }: { session: HistorySession }): React.JSX.Ele
                 {l.status === 'skipped' ? 'skipped' : l.bpm !== null ? `${l.bpm} BPM` : '—'}
               </span>
               <span className="w-10 text-right text-muted-foreground tabular-nums">
-                {formatDuration(l.secondsAllocated)}
+                {formatMaybeDuration(l.secondsAllocated)}
               </span>
             </li>
           ))}
