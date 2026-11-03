@@ -6,6 +6,7 @@ import type { Weekday, WeekScheduleEntry } from '../shared/week'
 import type { Settings, Theme } from '../shared/settings'
 import type { ExerciseLogInput } from '../shared/session'
 import type { BpmPoint, GraphableExercise, HistorySession, SessionSummary } from '../shared/history'
+import type { Stats } from '../shared/stats'
 
 // Custom APIs for renderer
 const api = {
@@ -42,7 +43,10 @@ const api = {
     /** Resolves to the new session id. */
     start: (dayId: number): Promise<number> => ipcRenderer.invoke('sessions:start', dayId),
     log: (input: ExerciseLogInput): Promise<void> => ipcRenderer.invoke('sessions:log', input),
-    finish: (sessionId: number): Promise<void> => ipcRenderer.invoke('sessions:finish', sessionId)
+    finish: (sessionId: number): Promise<void> => ipcRenderer.invoke('sessions:finish', sessionId),
+    /** Tells main which session is running, so closing the window can ask first. */
+    setActive: (sessionId: number | null): Promise<void> =>
+      ipcRenderer.invoke('sessions:setActive', sessionId)
   },
   history: {
     /** Every session, newest first, without logs. */
@@ -50,7 +54,14 @@ const api = {
     session: (id: number): Promise<HistorySession | null> =>
       ipcRenderer.invoke('history:session', id),
     exercises: (): Promise<GraphableExercise[]> => ipcRenderer.invoke('history:exercises'),
-    bpm: (exerciseId: number): Promise<BpmPoint[]> => ipcRenderer.invoke('history:bpm', exerciseId)
+    bpm: (exerciseId: number): Promise<BpmPoint[]> => ipcRenderer.invoke('history:bpm', exerciseId),
+    stats: (): Promise<Stats> => ipcRenderer.invoke('history:stats')
+  },
+  data: {
+    /** Saves a full backup. Resolves to its path, or null if cancelled. */
+    export: (): Promise<string | null> => ipcRenderer.invoke('data:export'),
+    /** Replaces all data with a backup. Resolves to false if cancelled. */
+    import: (): Promise<boolean> => ipcRenderer.invoke('data:import')
   }
 }
 

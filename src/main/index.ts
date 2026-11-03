@@ -4,6 +4,8 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { openDb, closeDb } from './db'
 import { registerIpc } from './ipc'
+import { guardCloseDuringSession } from './activeSession'
+import { abandonOpenSessions } from './db/sessions'
 import { getSettings } from './db/settings'
 import { SETTING, isTheme } from '../shared/settings'
 
@@ -31,6 +33,8 @@ function createWindow(): void {
     mainWindow.maximize()
     mainWindow.show()
   })
+
+  guardCloseDuringSession(mainWindow)
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -61,6 +65,7 @@ app.whenReady().then(() => {
   })
 
   openDb()
+  abandonOpenSessions() // left open by a crash or forced quit
   registerIpc()
   // Saved theme drives Electron's nativeTheme; the page follows prefers-color-scheme,
   // so it starts in the right theme with no flash.

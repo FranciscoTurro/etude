@@ -8,6 +8,8 @@ export const SETTING = {
   metronomeEnabled: 'metronome_enabled',
   /** Metronome tempo for exercises that have no BPM of their own. */
   metronomeBpm: 'metronome_bpm',
+  /** '1' | '0'. When on, the clock only runs while there's sound. Missing = on. */
+  clockListens: 'clock_listens',
   /** 'light' | 'dark'. Missing = follow the OS. */
   theme: 'theme'
 } as const

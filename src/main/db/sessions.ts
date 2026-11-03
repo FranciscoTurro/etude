@@ -46,3 +46,27 @@ export function finishSession(sessionId: number): void {
     )
     .run(sessionId)
 }
+
+/**
+ * Ends a session that was abandoned (app closed mid-run): it ends at its last log,
+ * so the time after that isn't counted. With no logs it ends where it started.
+ */
+export function abandonSession(sessionId: number): void {
+  getDb()
+    .prepare(
+      `UPDATE PracticeSession
+       SET finished_at = COALESCE(
+         (SELECT MAX(logged_at) FROM ExerciseLog WHERE session_id = PracticeSession.id),
+         started_at)
+       WHERE id = ? AND finished_at IS NULL`
+    )
+    .run(sessionId)
+}
+
+/** Closes sessions left open by a crash or a forced quit, the same way. */
+export function abandonOpenSessions(): void {
+  const ids = getDb().prepare('SELECT id FROM PracticeSession WHERE finished_at IS NULL').all() as {
+    id: number
+  }[]
+  for (const { id } of ids) abandonSession(id)
+}

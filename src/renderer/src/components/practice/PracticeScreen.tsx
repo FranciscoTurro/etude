@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { CheckIcon, PlayIcon, SkipForwardIcon, SquareIcon } from 'lucide-react'
+import { CheckIcon, PauseIcon, PlayIcon, SkipForwardIcon, SquareIcon } from 'lucide-react'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -100,6 +100,17 @@ export function PracticeScreen({
   const [elapsedMs, setElapsedMs] = useState(0)
   const [clockState, setClockState] = useState<'playing' | 'holding' | 'waiting'>('waiting')
   const [holdLeft, setHoldLeft] = useState(0)
+  /** Manual pause: stops the clock whatever the mic hears. */
+  const [paused, setPaused] = useState(false)
+  // When off, the clock just runs (until paused) instead of waiting for sound.
+  const listens = settings?.[SETTING.clockListens] !== '0'
+  const listensRef = useRef(listens)
+  listensRef.current = listens
+  const pausedRef = useRef(paused)
+  pausedRef.current = paused
+  function setListens(on: boolean): void {
+    window.api.settings.set(SETTING.clockListens, on ? '1' : '0').then(onChanged)
+  }
 
   // ---- audio ----
   const [thresholdDb, setThresholdDb] = useState(DEFAULT_THRESHOLD_DB)
@@ -173,6 +184,7 @@ export function PracticeScreen({
     elapsedRef.current = 0
     setElapsedMs(0)
     setClockState('waiting')
+    setPaused(false)
   }
 
   async function play(): Promise<void> {
@@ -260,11 +272,11 @@ export function PracticeScreen({
       const now = performance.now()
       const dt = now - last
       last = now
+      if (pausedRef.current) return
       const sinceSound = now - audio.lastAboveRef.current
-      const counting = noMicRef.current || sinceSound < SILENCE_HOLD_MS
-      setClockState(
-        noMicRef.current || sinceSound < 150 ? 'playing' : counting ? 'holding' : 'waiting'
-      )
+      const free = noMicRef.current || !listensRef.current
+      const counting = free || sinceSound < SILENCE_HOLD_MS
+      setClockState(free || sinceSound < 150 ? 'playing' : counting ? 'holding' : 'waiting')
       setHoldLeft(Math.ceil((SILENCE_HOLD_MS - sinceSound) / 1000))
       if (!counting) return
       elapsedRef.current += dt
@@ -273,6 +285,44 @@ export function PracticeScreen({
     }, 100)
     return () => clearInterval(timer)
   }, [phase, index, audio.lastAboveRef])
+
+  // Main asks before the window closes while this is set.
+  const activeSessionId = run && phase !== 'done' ? run.sessionId : null
+  useEffect(() => {
+    window.api.sessions.setActive(activeSessionId)
+  }, [activeSessionId])
+
+  // Space: play when queued, pause/resume while running.
+  const spaceRef = useRef<() => void>(() => {})
+  spaceRef.current = () => {
+    if (phase === 'queued') play()
+    else if (phase === 'running') setPaused((p) => !p)
+  }
+  useEffect(() => {
+    if (!visible) return
+    const isSpace = (e: KeyboardEvent): boolean =>
+      e.code === 'Space' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey
+    const ignored = (e: KeyboardEvent): boolean => {
+      const t = e.target as HTMLElement | null
+      if (t?.closest('input, textarea, select, [contenteditable="true"]')) return true
+      // Leave Space alone while a dialog, menu or dropdown is open.
+      return !!document.querySelector('[role="dialog"], [role="alertdialog"], [role="listbox"]')
+    }
+    const down = (e: KeyboardEvent): void => {
+      if (!isSpace(e) || ignored(e)) return
+      e.preventDefault() // otherwise it also "clicks" whichever button has focus
+      if (!e.repeat) spaceRef.current()
+    }
+    const up = (e: KeyboardEvent): void => {
+      if (isSpace(e) && !ignored(e)) e.preventDefault()
+    }
+    window.addEventListener('keydown', down, true)
+    window.addEventListener('keyup', up, true)
+    return () => {
+      window.removeEventListener('keydown', down, true)
+      window.removeEventListener('keyup', up, true)
+    }
+  }, [visible])
 
   const currentRowRef = useRef<HTMLLIElement>(null)
   useEffect(() => {
@@ -305,6 +355,12 @@ export function PracticeScreen({
     (i === index && picked ? picked : preselected(s))
   const totalSeconds =
     day?.slots.reduce((sum, s, i) => sum + choiceFor(i, s).allocatedSeconds, 0) ?? 0
+  // What's still ahead today: unlogged slots, minus what's already played of the current one.
+  const leftSeconds =
+    (day?.slots.reduce(
+      (sum, s, i) => (results[i] ? sum : sum + choiceFor(i, s).allocatedSeconds),
+      0
+    ) ?? 0) - Math.floor(elapsedMs / 1000)
 
   return (
     <div className="flex w-full flex-col gap-6 p-6 md:h-full xl:gap-8 xl:px-10">
@@ -413,7 +469,9 @@ export function PracticeScreen({
                 <div
                   className={cn(
                     'font-heading text-7xl font-semibold tabular-nums transition-colors xl:text-9xl',
-                    phase === 'running' && clockState === 'waiting' && 'text-muted-foreground'
+                    phase === 'running' &&
+                      (paused || clockState === 'waiting') &&
+                      'text-muted-foreground'
                   )}
                   aria-label="Time remaining"
                 >
@@ -422,22 +480,28 @@ export function PracticeScreen({
 
                 <p className="h-5 text-sm text-muted-foreground" aria-live="polite">
                   {phase === 'running' &&
-                    (clockState === 'playing'
-                      ? 'Playing'
-                      : clockState === 'holding'
-                        ? `Quiet… stopping in ${holdLeft}s`
-                        : 'Paused. Waiting for sound')}
+                    (paused
+                      ? 'Paused. Press Space to resume'
+                      : clockState === 'playing'
+                        ? 'Playing'
+                        : clockState === 'holding'
+                          ? `Quiet… stopping in ${holdLeft}s`
+                          : 'Waiting for sound')}
                 </p>
 
-                {phase === 'queued' && (
-                  <Button
-                    onClick={play}
-                    className="size-24 rounded-full xl:size-32 [&_svg:not([class*='size-'])]:size-10 xl:[&_svg:not([class*='size-'])]:size-14"
-                    aria-label="Play"
-                  >
+                <Button
+                  onClick={phase === 'queued' ? play : () => setPaused((p) => !p)}
+                  variant={phase === 'running' && !paused ? 'outline' : 'default'}
+                  className="size-24 rounded-full xl:size-32 [&_svg:not([class*='size-'])]:size-10 xl:[&_svg:not([class*='size-'])]:size-14"
+                  aria-label={phase === 'queued' ? 'Play' : paused ? 'Resume' : 'Pause'}
+                  title="Space"
+                >
+                  {phase === 'running' && !paused ? (
+                    <PauseIcon />
+                  ) : (
                     <PlayIcon className="translate-x-0.5" />
-                  </Button>
-                )}
+                  )}
+                </Button>
 
                 <div className="flex items-center gap-3">
                   {metronomeEnabled ? null : picked.bpm !== null ? (
@@ -483,6 +547,8 @@ export function PracticeScreen({
             deviceId={deviceId}
             onDeviceChange={changeDevice}
             error={audio.error}
+            listens={listens}
+            onListensChange={setListens}
           />
         </div>
 
@@ -493,6 +559,14 @@ export function PracticeScreen({
               <div className="flex items-baseline justify-between">
                 <h2 className="font-heading text-lg font-semibold">{day.name}</h2>
                 <span className="text-sm text-muted-foreground tabular-nums">
+                  {run && phase !== 'done' && (
+                    <>
+                      <span className="text-foreground">
+                        {formatDuration(Math.max(0, leftSeconds))}
+                      </span>{' '}
+                      left ·{' '}
+                    </>
+                  )}
                   {formatDuration(totalSeconds)}
                 </span>
               </div>

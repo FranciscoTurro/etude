@@ -5,6 +5,7 @@ import { BpmChart } from './BpmChart'
 import { parseLocalDate } from './dates'
 import { ExerciseList } from './ExerciseList'
 import { SessionsPane } from './SessionsPane'
+import { StatsView } from './StatsView'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const RANGES = [
@@ -20,8 +21,49 @@ interface Props {
   visible: boolean
 }
 
-/** Three columns: exercise picker | BPM progress chart | session calendar + day log. */
+const VIEWS = [
+  { key: 'progress', label: 'Progress' },
+  { key: 'stats', label: 'Stats' }
+] as const
+type View = (typeof VIEWS)[number]['key']
+
+/** Progress (per-exercise graph + sessions) or Stats (totals, streaks, records). */
 export function HistoryScreen({ visible }: Props): React.JSX.Element {
+  const [view, setView] = useState<View>('progress')
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex shrink-0 justify-center border-b py-2">
+        <div className="flex rounded-md border p-0.5" role="tablist" aria-label="History view">
+          {VIEWS.map((v) => (
+            <button
+              key={v.key}
+              role="tab"
+              aria-selected={view === v.key}
+              onClick={() => setView(v.key)}
+              className={cn(
+                'rounded-sm px-3 py-1 text-xs font-medium transition-colors',
+                view === v.key
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className={cn('min-h-0 flex-1', view !== 'progress' && 'hidden')}>
+        <ProgressView visible={visible && view === 'progress'} />
+      </div>
+      <div className={cn('min-h-0 flex-1 overflow-y-auto', view !== 'stats' && 'hidden')}>
+        <StatsView visible={visible && view === 'stats'} />
+      </div>
+    </div>
+  )
+}
+
+/** Three columns: exercise picker | BPM progress chart | session calendar + day log. */
+function ProgressView({ visible }: Props): React.JSX.Element {
   const [exercises, setExercises] = useState<GraphableExercise[] | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
 

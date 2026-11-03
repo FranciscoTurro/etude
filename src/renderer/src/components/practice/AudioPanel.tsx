@@ -1,5 +1,6 @@
 import { MicIcon, MicOffIcon } from 'lucide-react'
 import { cn } from 'cn'
+import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface Props {
@@ -11,6 +12,9 @@ interface Props {
   deviceId: string | undefined
   onDeviceChange: (id: string) => void
   error: string | null
+  /** Whether the clock waits for sound (off = it just runs until paused). */
+  listens: boolean
+  onListensChange: (on: boolean) => void
 }
 
 const MIN_DB = -80
@@ -18,7 +22,7 @@ const pct = (db: number): number => Math.min(100, Math.max(0, ((db - MIN_DB) / -
 
 /** Mic picker, live level meter and the "clock runs above this" threshold. */
 export function AudioPanel(props: Props): React.JSX.Element {
-  const { channelDbs, thresholdDb, devices, deviceId, error } = props
+  const { channelDbs, thresholdDb, devices, deviceId, error, listens } = props
   const meters = channelDbs.length ? channelDbs : [-Infinity]
   const items = devices.map((d, i) => ({ value: d.deviceId, label: d.label || `Input ${i + 1}` }))
   const selected = items.some((i) => i.value === deviceId) ? deviceId : (items[0]?.value ?? '')
@@ -49,7 +53,21 @@ export function AudioPanel(props: Props): React.JSX.Element {
         )}
       </div>
 
-      {error && (
+      <label className="flex cursor-pointer items-center justify-between gap-3 text-sm">
+        <span className="flex flex-col">
+          <span>Run the clock only while playing</span>
+          <span className="text-xs text-muted-foreground">
+            {listens ? 'It waits for sound above the threshold' : 'It runs until you pause it'}
+          </span>
+        </span>
+        <Switch
+          checked={listens}
+          onCheckedChange={props.onListensChange}
+          aria-label="Run the clock only while playing"
+        />
+      </label>
+
+      {error && listens && (
         <p className="text-xs text-destructive">
           {error}. Retrying… Until then the clock runs without sound detection.
         </p>
