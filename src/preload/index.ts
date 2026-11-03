@@ -3,6 +3,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 import type { Exercise, ExerciseInput } from '../shared/exercise'
 import type { Day, DayInput } from '../shared/day'
 import type { Weekday, WeekScheduleEntry } from '../shared/week'
+import type { Settings } from '../shared/settings'
+import type { ExerciseLogInput } from '../shared/session'
 
 // Custom APIs for renderer
 const api = {
@@ -28,6 +30,16 @@ const api = {
     /** dayId null = rest day */
     set: (weekday: Weekday, dayId: number | null): Promise<void> =>
       ipcRenderer.invoke('week:set', weekday, dayId)
+  },
+  settings: {
+    getAll: (): Promise<Settings> => ipcRenderer.invoke('settings:getAll'),
+    set: (key: string, value: string): Promise<void> => ipcRenderer.invoke('settings:set', key, value)
+  },
+  sessions: {
+    /** Resolves to the new session id. */
+    start: (dayId: number): Promise<number> => ipcRenderer.invoke('sessions:start', dayId),
+    log: (input: ExerciseLogInput): Promise<void> => ipcRenderer.invoke('sessions:log', input),
+    finish: (sessionId: number): Promise<void> => ipcRenderer.invoke('sessions:finish', sessionId)
   }
 }
 

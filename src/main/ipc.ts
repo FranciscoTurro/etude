@@ -12,6 +12,9 @@ import type { ExerciseInput } from '../shared/exercise'
 import type { DayInput } from '../shared/day'
 import { getWeekSchedule, setWeekday } from './db/week'
 import type { Weekday } from '../shared/week'
+import { getSettings, setSetting } from './db/settings'
+import { finishSession, logExercise, startSession } from './db/sessions'
+import type { ExerciseLogInput } from '../shared/session'
 
 export function registerIpc(): void {
   ipcMain.handle('exercises:list', () => listExercises())
@@ -29,4 +32,11 @@ export function registerIpc(): void {
 
   ipcMain.handle('week:get', () => getWeekSchedule())
   ipcMain.handle('week:set', (_, weekday: Weekday, dayId: number | null) => setWeekday(weekday, dayId))
+
+  ipcMain.handle('settings:getAll', () => getSettings())
+  ipcMain.handle('settings:set', (_, key: string, value: string) => setSetting(key, value))
+
+  ipcMain.handle('sessions:start', (_, dayId: number) => startSession(dayId))
+  ipcMain.handle('sessions:log', (_, input: ExerciseLogInput) => logExercise(input))
+  ipcMain.handle('sessions:finish', (_, sessionId: number) => finishSession(sessionId))
 }

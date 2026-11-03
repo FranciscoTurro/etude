@@ -5,17 +5,22 @@ import icon from '../../resources/icon.png?asset'
 import { openDb, closeDb } from './db'
 import { registerIpc } from './ipc'
 
+// Desktop app: let the finish chime and mic analysis start without a prior click.
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1100,
+    height: 760,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      // keep the practice clock and mic analysis running when minimized
+      backgroundThrottling: false
     }
   })
 
