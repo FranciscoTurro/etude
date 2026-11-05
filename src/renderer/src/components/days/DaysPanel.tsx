@@ -33,7 +33,9 @@ const CARD_CHROME_PX = 48
 
 const slotLabel = (slot: Slot): string =>
   slot.song
-    ? `Song: ${slot.exercises.find((e) => e.id === slot.preselectedId)?.name ?? 'none yet'}`
+    ? slot.exercises.length > 0
+      ? 'Song'
+      : 'No songs yet'
     : slot.exercises.map((e) => e.name).join(' / ')
 
 interface Props {
@@ -219,9 +221,8 @@ function DayCard({
                   <span className="min-w-0 truncate">
                     {slot.song && (
                       <span className="inline-flex items-center gap-1.5">
-                        <MusicIcon className="size-3.5 shrink-0 text-signal" aria-label="Song" />
-                        {slot.exercises.find((e) => e.id === slot.preselectedId)?.name ??
-                          'No songs yet'}
+                        <MusicIcon className="size-3.5 shrink-0 text-signal" aria-hidden />
+                        {slotLabel(slot)}
                       </span>
                     )}
                     {!slot.song &&

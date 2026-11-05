@@ -34,9 +34,7 @@ export function StatsView({ visible }: { visible: boolean }): React.JSX.Element 
   }
 
   const all = stats.allTime
-  // Streaks, records and these two figures only count practice since the cut-off.
-  const rec = stats.sinceCutoff
-  const logged = rec.completed + rec.skipped
+  const logged = all.completed + all.skipped
   const sinceNote = stats.recordsSince ? `since ${formatLongDate(stats.recordsSince)}` : undefined
   const year = parseLocalDate(stats.today).getFullYear()
 
@@ -59,10 +57,11 @@ export function StatsView({ visible }: { visible: boolean }): React.JSX.Element 
           prevLabel={`${year - 1}`}
         />
         <PeriodCard
-          title="All time"
+          title={stats.recordsSince ? 'Total' : 'All time'}
           t={all}
           note={
-            stats.firstSessionDate ? `since ${formatLongDate(stats.firstSessionDate)}` : undefined
+            sinceNote ??
+            (stats.firstSessionDate ? `since ${formatLongDate(stats.firstSessionDate)}` : undefined)
           }
         />
       </div>
@@ -85,8 +84,8 @@ export function StatsView({ visible }: { visible: boolean }): React.JSX.Element 
         />
         <Fact
           label="Completed"
-          value={logged ? `${Math.round((rec.completed / logged) * 100)}%` : '–'}
-          note={`${rec.completed} done, ${rec.skipped} skipped${sinceNote ? ` ${sinceNote}` : ''}`}
+          value={logged ? `${Math.round((all.completed / logged) * 100)}%` : '–'}
+          note={`${all.completed} done, ${all.skipped} skipped${sinceNote ? ` ${sinceNote}` : ''}`}
         />
         <Fact
           label="Average session"
@@ -102,7 +101,7 @@ export function StatsView({ visible }: { visible: boolean }): React.JSX.Element 
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="By weekday" subtitle="Practice time, all time">
+        <Card title="By weekday" subtitle={`Practice time, ${sinceNote ?? 'all time'}`}>
           <Bars
             rows={stats.byWeekday.map((w) => ({
               label: WEEKDAY_LABELS[w.weekday].slice(0, 3),
@@ -185,8 +184,8 @@ export function StatsView({ visible }: { visible: boolean }): React.JSX.Element 
             )}
             <Record
               label="Total practice"
-              value={formatHours(rec.practiceSeconds)}
-              note={`${plural(rec.sessions, 'session')} on ${plural(rec.daysPracticed, 'day')}`}
+              value={formatHours(all.practiceSeconds)}
+              note={`${plural(all.sessions, 'session')} on ${plural(all.daysPracticed, 'day')}`}
             />
           </ul>
         </Card>
@@ -200,7 +199,8 @@ function headline(s: Stats): string {
     `You practiced on ${plural(s.month.daysPracticed, 'day')} this month and ${plural(s.year.daysPracticed, 'day')} this year`
   ]
   if (s.currentStreak > 1) parts.push(`and you're on a ${s.currentStreak}-day streak`)
-  return parts.join(', ') + '.'
+  const counting = s.recordsSince ? ` Counting practice since ${formatLongDate(s.recordsSince)}.` : ''
+  return parts.join(', ') + '.' + counting
 }
 
 // ---- pieces ----

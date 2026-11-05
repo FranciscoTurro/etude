@@ -8,14 +8,15 @@ export const SETTING = {
   metronomeEnabled: 'metronome_enabled',
   /** Metronome tempo for exercises that have no BPM of their own. */
   metronomeBpm: 'metronome_bpm',
+  /** 0–100. */
+  metronomeVolume: 'metronome_volume',
   /** '1' | '0'. When on, the clock only runs while there's sound. Missing = on. */
   clockListens: 'clock_listens',
   /** 'light' | 'dark'. Missing = follow the OS. */
   theme: 'theme',
   /**
-   * Local 'YYYY-MM-DD'. Streaks, records and the completion/average-session figures only
-   * count practice from this date on (earlier history was imported, its timings estimated).
-   * Missing = all history counts.
+   * Local 'YYYY-MM-DD'. All stats only count practice from this date on (earlier history was
+   * imported, its timings estimated). Missing = all history counts.
    */
   recordsSince: 'records_since'
 } as const
@@ -24,6 +25,7 @@ export type Theme = 'light' | 'dark'
 export const isTheme = (v: unknown): v is Theme => v === 'light' || v === 'dark'
 
 export const DEFAULT_METRONOME_BPM = 100
+export const DEFAULT_METRONOME_VOLUME = 60
 
 export type Settings = Record<string, string>
 

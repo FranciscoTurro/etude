@@ -5,11 +5,13 @@ import {
   PauseIcon,
   PlayIcon,
   SkipForwardIcon,
-  SquareIcon
+  SquareIcon,
+  Volume2Icon
 } from 'lucide-react'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -29,15 +31,17 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useAudioInput } from '@/hooks/useAudioInput'
 import { useMetronome } from '@/hooks/useMetronome'
-import { playFinishChime } from '@/lib/sounds'
+import { playFinishChime, setClickVolume } from '@/lib/sounds'
 import { AudioPanel } from './AudioPanel'
 import { MetronomePanel } from './MetronomePanel'
+import { SongPicker } from './SongPicker'
 import { formatDuration, formatMaybeDuration } from '../../../../shared/exercise'
 import type { Day, Slot, SlotExercise } from '../../../../shared/day'
 import type { LogStatus } from '../../../../shared/session'
 import { WEEKDAY_LABELS, weekdayOf, type WeekScheduleEntry } from '../../../../shared/week'
 import {
   DEFAULT_METRONOME_BPM,
+  DEFAULT_METRONOME_VOLUME,
   DEFAULT_THRESHOLD_DB,
   SETTING,
   SILENCE_HOLD_MS,
@@ -157,6 +161,22 @@ export function PracticeScreen({
   // ---- metronome ----
   // Follows the exercise's (session) BPM; exercises without one use the metronome's own tempo.
   const metronomeEnabled = settings?.[SETTING.metronomeEnabled] !== '0'
+  function setMetronomeEnabled(on: boolean): void {
+    window.api.settings.set(SETTING.metronomeEnabled, on ? '1' : '0').then(onChanged)
+  }
+  const [volumeDraft, setVolumeDraft] = useState<number | null>(null)
+  const metronomeVolume =
+    volumeDraft ?? Number(settings?.[SETTING.metronomeVolume] ?? DEFAULT_METRONOME_VOLUME)
+  useEffect(() => setClickVolume(metronomeVolume), [metronomeVolume])
+  const saveVolume = useRef<ReturnType<typeof setTimeout>>(undefined)
+  function changeMetronomeVolume(volume: number): void {
+    setVolumeDraft(volume)
+    clearTimeout(saveVolume.current)
+    saveVolume.current = setTimeout(
+      () => window.api.settings.set(SETTING.metronomeVolume, String(volume)),
+      400
+    )
+  }
   const [freeBpmText, setFreeBpmText] = useState<string | null>(null)
   const savedFreeBpm = Number(settings?.[SETTING.metronomeBpm])
   const freeBpm = freeBpmText ?? String(savedFreeBpm > 0 ? savedFreeBpm : DEFAULT_METRONOME_BPM)
@@ -166,7 +186,12 @@ export function PracticeScreen({
   const metronomeBpm = Number(metronomeText)
   const beat = useMetronome(
     metronomeBpm,
-    metronomeEnabled && metronomeOn && !!picked && Number.isFinite(metronomeBpm) && metronomeBpm > 0
+    metronomeEnabled &&
+      metronomeOn &&
+      !paused &&
+      !!picked &&
+      Number.isFinite(metronomeBpm) &&
+      metronomeBpm > 0
   )
   const saveFreeBpm = useRef<ReturnType<typeof setTimeout>>(undefined)
   function changeMetronomeBpm(text: string): void {
@@ -322,7 +347,9 @@ export function PracticeScreen({
       e.code === 'Space' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey
     const ignored = (e: KeyboardEvent): boolean => {
       const t = e.target as HTMLElement | null
-      if (t?.closest('input, textarea, select, [contenteditable="true"]')) return true
+      // Sliders and switches stay focused after use, and Space must still pause then.
+      const typing = 'input:not([type="range"], [type="checkbox"]), textarea, select'
+      if (t?.closest(`${typing}, [contenteditable="true"]`)) return true
       // Leave Space alone while a dialog, menu or dropdown is open.
       return !!document.querySelector('[role="dialog"], [role="alertdialog"], [role="listbox"]')
     }
@@ -467,7 +494,16 @@ export function PracticeScreen({
                     {String(index + 1).padStart(2, '0')} /{' '}
                     {String(day.slots.length).padStart(2, '0')}
                   </span>
-                  {slot.exercises.length > 1 && phase === 'queued' ? (
+                  {slot.song && slot.exercises.length > 1 && phase === 'queued' ? (
+                    <SongPicker
+                      songs={slot.exercises}
+                      value={picked}
+                      onChange={(song) => {
+                        setPickedId(song.id)
+                        setBpmText(null)
+                      }}
+                    />
+                  ) : slot.exercises.length > 1 && phase === 'queued' ? (
                     <div
                       className="flex flex-wrap justify-center gap-2"
                       role="radiogroup"
@@ -485,7 +521,6 @@ export function PracticeScreen({
                             setBpmText(null)
                           }}
                         >
-                          {slot.song && <MusicIcon />}
                           {e.name}
                         </Button>
                       ))}
@@ -526,6 +561,37 @@ export function PracticeScreen({
                     )}
                     {status?.text ?? (phase === 'queued' ? 'Press Space to start' : '')}
                   </p>
+
+                  <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
+                    <label className="flex cursor-pointer items-center gap-2">
+                      Metronome
+                      <Switch
+                        checked={metronomeEnabled}
+                        onCheckedChange={setMetronomeEnabled}
+                        aria-label="Metronome"
+                      />
+                    </label>
+                    <label
+                      className={cn(
+                        'flex items-center gap-2 text-muted-foreground',
+                        !metronomeEnabled && 'opacity-50'
+                      )}
+                    >
+                      <Volume2Icon className="size-4 shrink-0" />
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={metronomeVolume}
+                        disabled={!metronomeEnabled}
+                        onChange={(e) => changeMetronomeVolume(Number(e.target.value))}
+                        className="w-36 cursor-pointer accent-primary disabled:cursor-not-allowed"
+                        aria-label="Metronome volume"
+                      />
+                      <span className="w-8 text-right font-mono text-xs">{metronomeVolume}%</span>
+                    </label>
+                  </div>
                 </>
               )}
             </div>
@@ -651,8 +717,8 @@ export function PracticeScreen({
                       >
                         {s.song && (
                           <span className="inline-flex items-center gap-2">
-                            <MusicIcon className="size-4 shrink-0 text-signal" aria-label="Song" />
-                            {chosen.name}
+                            <MusicIcon className="size-4 shrink-0 text-signal" aria-hidden />
+                            Song
                           </span>
                         )}
                         {!s.song &&

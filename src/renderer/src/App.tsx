@@ -63,12 +63,7 @@ function App(): React.JSX.Element {
         </Button>
       </nav>
 
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        onChanged={refresh}
-      />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
 
       {/* Practice stays mounted so a running session survives a trip to the library. */}
       <main className={cn('min-h-0 flex-1 overflow-y-auto', tab !== 'practice' && 'hidden')}>

@@ -45,10 +45,8 @@ export interface Stats {
   lastMonth: PeriodTotals
   lastYear: PeriodTotals
 
-  /** Records cut-off (local date): the fields from here to topDays only count practice since. null = all */
+  /** Cut-off (local date): every figure here only counts practice since. null = all history */
   recordsSince: string | null
-  /** Totals since the cut-off, for the completion rate and the Total practice record */
-  sinceCutoff: PeriodTotals
 
   /** Consecutive practiced days ending today (or yesterday, if today isn't done yet) */
   currentStreak: number
@@ -62,11 +60,11 @@ export interface Stats {
 
   /** Practice seconds per local date, last 53 weeks (dates without practice omitted) */
   activity: { date: string; practiceSeconds: number }[]
-  /** Practice seconds by weekday, all time */
+  /** Practice seconds by weekday */
   byWeekday: { weekday: Weekday; practiceSeconds: number; sessions: number }[]
-  /** Sessions by the hour they started (local), all time */
+  /** Sessions by the hour they started (local) */
   byTimeOfDay: { label: string; sessions: number }[]
-  /** Routine days by number of sessions, since the cut-off */
+  /** Routine days by number of sessions */
   topDays: { name: string; sessions: number }[]
 
   topExercises: ExerciseStat[]
