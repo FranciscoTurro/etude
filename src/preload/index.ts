@@ -1,5 +1,4 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
 import type { Exercise, ExerciseInput } from '../shared/exercise'
 import type { Day, DayInput } from '../shared/day'
 import type { Weekday, WeekScheduleEntry } from '../shared/week'
@@ -69,19 +68,5 @@ const api = {
 
 export type Api = typeof api
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
-}
+// Only this typed API reaches the page: no raw ipcRenderer, no process.env.
+contextBridge.exposeInMainWorld('api', api)

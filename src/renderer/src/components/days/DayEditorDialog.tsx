@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { errorText } from '@/lib/errors'
 import { formatDuration, type Exercise } from '../../../../shared/exercise'
 import { SONG_SLOT, validateDayInput, type Day } from '../../../../shared/day'
 import {
@@ -163,7 +164,7 @@ function DayEditor({
       await window.api.days.save(day?.id, input)
       onSaved()
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(errorText(err))
     } finally {
       setSaving(false)
     }

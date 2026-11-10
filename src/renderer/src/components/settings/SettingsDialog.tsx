@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
+import { errorText } from '@/lib/errors'
 
 interface Props {
   open: boolean
@@ -163,12 +164,6 @@ export function SettingsDialog({ open, onOpenChange }: Props): React.JSX.Element
       </AlertDialog>
     </Dialog>
   )
-}
-
-/** IPC errors arrive as "Error invoking remote method 'x': Error: <message>". */
-function errorText(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err)
-  return msg.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
 }
 
 function Row({

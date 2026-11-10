@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { cn } from 'cn'
 import { Segmented } from '@/components/common/Segmented'
-import { SettingsIcon } from 'lucide-react'
+import { SettingsIcon, XIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { errorText } from '@/lib/errors'
 import { SettingsDialog } from '@/components/settings/SettingsDialog'
 import { LibraryScreen } from '@/components/library/LibraryScreen'
 import { PracticeScreen } from '@/components/practice/PracticeScreen'
@@ -46,6 +47,18 @@ function App(): React.JSX.Element {
     refresh()
   }, [refresh])
 
+  // Any IPC call nobody awaited with a catch (saving a setting, deleting a day, loading
+  // history...) lands here, so a failure is shown instead of silently doing nothing.
+  const [failure, setFailure] = useState<string | null>(null)
+  useEffect(() => {
+    const onRejection = (e: PromiseRejectionEvent): void => {
+      console.error(e.reason)
+      setFailure(errorText(e.reason))
+    }
+    window.addEventListener('unhandledrejection', onRejection)
+    return () => window.removeEventListener('unhandledrejection', onRejection)
+  }, [])
+
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       <nav className="relative z-10 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center px-6 py-3 xl:px-10">
@@ -86,6 +99,24 @@ function App(): React.JSX.Element {
       <main className={cn('min-h-0 flex-1 overflow-hidden', tab !== 'history' && 'hidden')}>
         <HistoryScreen visible={tab === 'history'} />
       </main>
+
+      {failure && (
+        <div
+          role="alert"
+          className="fixed inset-x-0 bottom-4 z-60 mx-auto flex w-fit max-w-[calc(100%-2rem)] items-center gap-3 rounded-xl border border-destructive/40 bg-background px-4 py-2.5 text-sm shadow-lg"
+        >
+          <span className="text-destructive">Something went wrong: {failure}</span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setFailure(null)}
+            title="Dismiss"
+            aria-label="Dismiss"
+          >
+            <XIcon />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

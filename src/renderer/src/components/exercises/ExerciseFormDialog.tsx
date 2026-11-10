@@ -10,6 +10,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { errorText } from '@/lib/errors'
 import {
   validateExerciseInput,
   type Exercise,
@@ -98,7 +99,7 @@ function ExerciseForm({
       else await window.api.exercises.create(input)
       onSaved()
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : String(err))
+      setSaveError(errorText(err))
     } finally {
       setSaving(false)
     }

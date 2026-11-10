@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, renameSync, rmSync } from 'fs'
+import { copyFileSync, renameSync, rmSync } from 'fs'
 import Database from 'better-sqlite3'
 import { closeDb, dbPath, getDb, openDb } from './index'
 import { LATEST_SCHEMA_VERSION, migrate } from './migrations'
@@ -19,9 +19,17 @@ const REQUIRED_TABLES = [
  * settings) to `dest`. VACUUM INTO folds in the WAL, so the result is one file.
  */
 export function exportDb(dest: string): void {
-  // VACUUM INTO refuses to overwrite; the save dialog already confirmed it.
-  if (existsSync(dest)) rmSync(dest)
-  getDb().prepare('VACUUM INTO ?').run(dest)
+  // VACUUM INTO refuses to overwrite, so it writes beside `dest` and the result replaces
+  // it (the save dialog already confirmed that). If anything fails, `dest` is untouched.
+  const tmp = `${dest}.tmp`
+  rmSync(tmp, { force: true })
+  try {
+    getDb().prepare('VACUUM INTO ?').run(tmp)
+    renameSync(tmp, dest)
+  } catch (err) {
+    rmSync(tmp, { force: true })
+    throw err
+  }
 }
 
 /**

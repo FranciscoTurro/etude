@@ -18,7 +18,7 @@ import { getWeekSchedule, setWeekday } from './db/week'
 import type { Weekday } from '../shared/week'
 import { getSettings, setSetting } from './db/settings'
 import { SETTING, isTheme, type Theme } from '../shared/settings'
-import { finishSession, logExercise, startSession } from './db/sessions'
+import { abandonOpenSessions, finishSession, logExercise, startSession } from './db/sessions'
 import { setActiveSession } from './activeSession'
 import { getStats } from './db/stats'
 import type { ExerciseLogInput } from '../shared/session'
@@ -107,6 +107,7 @@ export function registerIpc(): void {
     if (canceled || !filePaths[0]) return false
     importDb(filePaths[0])
     setActiveSession(null) // it belonged to the data that was just replaced
+    abandonOpenSessions() // a backup made mid-session carries that session still open
     const theme = getSettings()[SETTING.theme]
     nativeTheme.themeSource = isTheme(theme) ? theme : 'system'
     return true

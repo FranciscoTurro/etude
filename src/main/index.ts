@@ -12,6 +12,15 @@ import { SETTING, isTheme } from '../shared/settings'
 // Desktop app: let the finish chime and mic analysis start without a prior click.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
+function isWebUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url)
+    return protocol === 'https:' || protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -23,7 +32,8 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      sandbox: true,
+      contextIsolation: true,
       // keep the practice clock and mic analysis running when minimized
       backgroundThrottling: false
     }
@@ -36,9 +46,15 @@ function createWindow(): void {
 
   guardCloseDuringSession(mainWindow)
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+  // Links open in the browser, and only web links: file: or custom protocols could launch programs.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (isWebUrl(url)) void shell.openExternal(url)
     return { action: 'deny' }
+  })
+  // The window only ever shows the app itself; reloads don't go through will-navigate.
+  mainWindow.webContents.on('will-navigate', (e, url) => {
+    e.preventDefault()
+    if (isWebUrl(url)) void shell.openExternal(url)
   })
 
   // HMR for renderer base on electron-vite cli.
@@ -55,7 +71,8 @@ function createWindow(): void {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  // Must match appId in electron-builder.yml, or Windows splits taskbar grouping and pins.
+  electronApp.setAppUserModelId('com.etude.app')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

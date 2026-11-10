@@ -33,6 +33,7 @@ import {
 import { useAudioInput } from '@/hooks/useAudioInput'
 import { useMetronome } from '@/hooks/useMetronome'
 import { playFinishChime, setClickVolume } from '@/lib/sounds'
+import { errorText } from '@/lib/errors'
 import { AudioPanel } from './AudioPanel'
 import { MetronomePanel } from './MetronomePanel'
 import { SongPicker } from './SongPicker'
@@ -231,14 +232,20 @@ export function PracticeScreen({
     setPaused(false)
   }
 
+  /** Set when saving to the DB failed; the session stays where it was so nothing is lost. */
+  const [sessionError, setSessionError] = useState<string | null>(null)
+
   async function play(): Promise<void> {
     if (!slot || busy.current) return
     busy.current = true
     try {
       await ensureRun()
+      setSessionError(null)
       resetClock()
       setPhase('running')
       setMetronomeOn(true)
+    } catch (err) {
+      setSessionError(`Couldn't start the session: ${errorText(err)}`)
     } finally {
       busy.current = false
     }
@@ -272,6 +279,7 @@ export function PracticeScreen({
       })
       if (status === 'completed') playFinishChime()
 
+      setSessionError(null)
       setResults((prev) => ({ ...prev, [index]: { status, exerciseId: ex.id } }))
       setPickedId(null)
       setBpmText(null)
@@ -285,13 +293,24 @@ export function PracticeScreen({
         setIndex(index + 1)
         setPhase('queued')
       }
+    } catch (err) {
+      // Pausing stops the clock from retrying the save every tick once time is up.
+      // Resume (or Done/Skip) tries again.
+      setPaused(true)
+      setSessionError(`Couldn't save this exercise: ${errorText(err)}`)
     } finally {
       busy.current = false
     }
   }
 
   async function endSession(): Promise<void> {
-    if (run && phase !== 'done') await window.api.sessions.finish(run.sessionId)
+    try {
+      if (run && phase !== 'done') await window.api.sessions.finish(run.sessionId)
+    } catch (err) {
+      setSessionError(`Couldn't end the session: ${errorText(err)}`)
+      return
+    }
+    setSessionError(null)
     setRun(null)
     setIndex(0)
     setPhase('queued')
@@ -606,6 +625,11 @@ export function PracticeScreen({
               )}
             </div>
 
+            {sessionError && (
+              <p role="alert" className="mb-3 text-center text-sm text-destructive">
+                {sessionError}
+              </p>
+            )}
             {active && picked && (
               <footer className="flex flex-wrap items-center gap-4">
                 <button

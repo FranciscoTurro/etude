@@ -9,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog'
+import { errorText } from '@/lib/errors'
 import type { Exercise } from '../../../../shared/exercise'
 
 interface Props {
@@ -45,7 +46,7 @@ export function DeleteExerciseDialog({ exercise, onOpenChange, onDeleted }: Prop
       await window.api.exercises.delete(exercise.id)
       onDeleted()
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(errorText(err))
     } finally {
       setDeleting(false)
     }
