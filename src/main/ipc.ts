@@ -1,6 +1,8 @@
 import { BrowserWindow, dialog, ipcMain, nativeTheme } from 'electron'
 import { format } from 'date-fns'
+import { writeFile } from 'fs/promises'
 import { exportDb, importDb } from './db/backup'
+import { routineText } from './routineText'
 import {
   createExercise,
   daysUsingExercise,
@@ -57,9 +59,7 @@ export function registerIpc(): void {
   ipcMain.handle('sessions:start', (_, dayId: number) => startSession(dayId))
   ipcMain.handle('sessions:log', (_, input: ExerciseLogInput) => logExercise(input))
   ipcMain.handle('sessions:finish', (_, sessionId: number) => finishSession(sessionId))
-  ipcMain.handle('sessions:setActive', (_, sessionId: number | null) =>
-    setActiveSession(sessionId)
-  )
+  ipcMain.handle('sessions:setActive', (_, sessionId: number | null) => setActiveSession(sessionId))
 
   ipcMain.handle('history:sessions', () => listSessionSummaries())
   ipcMain.handle('history:session', (_, id: number) => getSession(id))
@@ -77,6 +77,19 @@ export function registerIpc(): void {
     })
     if (canceled || !filePath) return null
     exportDb(filePath)
+    return filePath
+  })
+
+  /** The week's routine as a .txt. Resolves to the saved path, or null if cancelled. */
+  ipcMain.handle('data:exportText', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const { canceled, filePath } = await dialog.showSaveDialog(win, {
+      title: 'Export routine as text',
+      defaultPath: `etude-routine-${format(new Date(), 'yyyy-MM-dd')}.txt`,
+      filters: [{ name: 'Text file', extensions: ['txt'] }]
+    })
+    if (canceled || !filePath) return null
+    await writeFile(filePath, routineText(), 'utf8')
     return filePath
   })
 

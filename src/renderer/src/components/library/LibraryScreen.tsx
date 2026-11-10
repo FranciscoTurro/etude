@@ -34,6 +34,14 @@ export function LibraryScreen({ exercises, days, week, onChanged }: Props): Reac
         : [null, null],
     [exercises]
   )
+  // Song slots list every song as an alternative, so this covers songs too.
+  const scheduledIds = useMemo(
+    () =>
+      days
+        ? new Set(days.flatMap((d) => d.slots.flatMap((s) => s.exercises.map((e) => e.id))))
+        : null,
+    [days]
+  )
 
   const tabs = (
     <Segmented label="Library section" options={SECTIONS} value={section} onChange={setSection} />
@@ -56,6 +64,7 @@ export function LibraryScreen({ exercises, days, week, onChanged }: Props): Reac
           kind={section === 'songs' ? 'song' : 'exercise'}
           tabs={tabs}
           exercises={section === 'songs' ? songs : plain}
+          scheduledIds={scheduledIds}
           onChanged={onChanged}
         />
       )}

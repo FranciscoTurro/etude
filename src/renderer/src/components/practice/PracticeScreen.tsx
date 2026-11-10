@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CheckIcon,
+  MetronomeIcon,
   MusicIcon,
   PauseIcon,
   PlayIcon,
   SkipForwardIcon,
   SquareIcon,
-  Volume2Icon
+  Volume2Icon,
+  VolumeXIcon
 } from 'lucide-react'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -115,6 +116,9 @@ export function PracticeScreen({
   // ---- clock ----
   const elapsedRef = useRef(0)
   const [elapsedMs, setElapsedMs] = useState(0)
+  /** Wall-clock time since play, silence and pauses included. */
+  const wallRef = useRef(0)
+  const [wallMs, setWallMs] = useState(0)
   const [clockState, setClockState] = useState<'playing' | 'holding' | 'waiting'>('waiting')
   const [holdLeft, setHoldLeft] = useState(0)
   /** Manual pause: stops the clock whatever the mic hears. */
@@ -221,6 +225,8 @@ export function PracticeScreen({
   function resetClock(): void {
     elapsedRef.current = 0
     setElapsedMs(0)
+    wallRef.current = 0
+    setWallMs(0)
     setClockState('waiting')
     setPaused(false)
   }
@@ -313,6 +319,8 @@ export function PracticeScreen({
       const now = performance.now()
       const dt = now - last
       last = now
+      wallRef.current += dt
+      setWallMs(wallRef.current)
       if (pausedRef.current) return
       const sinceSound = now - audio.lastAboveRef.current
       const free = noMicRef.current || !listensRef.current
@@ -563,14 +571,16 @@ export function PracticeScreen({
                   </p>
 
                   <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
-                    <label className="flex cursor-pointer items-center gap-2">
-                      Metronome
-                      <Switch
-                        checked={metronomeEnabled}
-                        onCheckedChange={setMetronomeEnabled}
-                        aria-label="Metronome"
-                      />
-                    </label>
+                    <Button
+                      size="lg"
+                      variant={metronomeEnabled ? 'default' : 'outline'}
+                      onClick={() => setMetronomeEnabled(!metronomeEnabled)}
+                      aria-pressed={metronomeEnabled}
+                      className="min-w-48 font-semibold"
+                    >
+                      {metronomeEnabled ? <MetronomeIcon /> : <VolumeXIcon />}
+                      Metronome {metronomeEnabled ? 'on' : 'off'}
+                    </Button>
                     <label
                       className={cn(
                         'flex items-center gap-2 text-muted-foreground',
@@ -671,6 +681,14 @@ export function PracticeScreen({
               <div className="flex items-baseline justify-between gap-3">
                 <h2 className="truncate text-xl font-semibold">{day.name}</h2>
                 <span className="shrink-0 font-mono text-[13px] text-muted-foreground">
+                  {phase === 'running' && (
+                    <span title="Time since you pressed play, including silence and pauses">
+                      <span className="text-foreground">
+                        {formatDuration(Math.floor(wallMs / 1000))}
+                      </span>{' '}
+                      elapsed ·{' '}
+                    </span>
+                  )}
                   {run && phase !== 'done' && (
                     <>
                       <span className="text-foreground">

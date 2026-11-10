@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { DownloadIcon, MoonIcon, UploadIcon } from 'lucide-react'
+import { DownloadIcon, FileTextIcon, MoonIcon, UploadIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   AlertDialog,
@@ -45,6 +45,19 @@ export function SettingsDialog({ open, onOpenChange }: Props): React.JSX.Element
     setStatus(null)
     try {
       const path = await window.api.data.export()
+      if (path) setStatus({ ok: true, text: `Saved to ${path}` })
+    } catch (err) {
+      setStatus({ ok: false, text: errorText(err) })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function exportText(): Promise<void> {
+    setBusy(true)
+    setStatus(null)
+    try {
+      const path = await window.api.data.exportText()
       if (path) setStatus({ ok: true, text: `Saved to ${path}` })
     } catch (err) {
       setStatus({ ok: false, text: errorText(err) })
@@ -102,6 +115,20 @@ export function SettingsDialog({ open, onOpenChange }: Props): React.JSX.Element
               onClick={() => setConfirmImport(true)}
             >
               <UploadIcon /> Import
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 border-t pt-3">
+          <div className="flex flex-col">
+            <span className="text-sm font-medium">Routine as text</span>
+            <span className="text-xs text-muted-foreground">
+              A .txt with each day of the week, its exercises, their observations and time.
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={busy} onClick={exportText}>
+              <FileTextIcon /> Export .txt
             </Button>
           </div>
           {status && (

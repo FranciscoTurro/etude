@@ -60,6 +60,8 @@ const api = {
   data: {
     /** Saves a full backup. Resolves to its path, or null if cancelled. */
     export: (): Promise<string | null> => ipcRenderer.invoke('data:export'),
+    /** Saves the week's routine as a .txt. Resolves to its path, or null if cancelled. */
+    exportText: (): Promise<string | null> => ipcRenderer.invoke('data:exportText'),
     /** Replaces all data with a backup. Resolves to false if cancelled. */
     import: (): Promise<boolean> => ipcRenderer.invoke('data:import')
   }
