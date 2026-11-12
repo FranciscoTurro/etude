@@ -12,7 +12,6 @@ import {
 } from 'lucide-react'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -117,9 +116,9 @@ export function PracticeScreen({
   // ---- clock ----
   const elapsedRef = useRef(0)
   const [elapsedMs, setElapsedMs] = useState(0)
-  /** Wall-clock time since play, silence and pauses included. */
-  const wallRef = useRef(0)
-  const [wallMs, setWallMs] = useState(0)
+  /** When the session started (performance.now()); the elapsed counter covers the whole practice. */
+  const sessionStartRef = useRef<number | null>(null)
+  const [sessionMs, setSessionMs] = useState(0)
   const [clockState, setClockState] = useState<'playing' | 'holding' | 'waiting'>('waiting')
   const [holdLeft, setHoldLeft] = useState(0)
   /** Manual pause: stops the clock whatever the mic hears. */
@@ -219,6 +218,8 @@ export function PracticeScreen({
     if (run) return run
     if (!liveDay) throw new Error('No day selected')
     const next = { sessionId: await window.api.sessions.start(liveDay.id), day: liveDay }
+    sessionStartRef.current = performance.now()
+    setSessionMs(0)
     setRun(next)
     return next
   }
@@ -226,8 +227,6 @@ export function PracticeScreen({
   function resetClock(): void {
     elapsedRef.current = 0
     setElapsedMs(0)
-    wallRef.current = 0
-    setWallMs(0)
     setClockState('waiting')
     setPaused(false)
   }
@@ -319,6 +318,8 @@ export function PracticeScreen({
     setBpmText(null)
     setMetronomeOn(false)
     resetClock()
+    sessionStartRef.current = null
+    setSessionMs(0)
     onChanged()
   }
 
@@ -338,8 +339,6 @@ export function PracticeScreen({
       const now = performance.now()
       const dt = now - last
       last = now
-      wallRef.current += dt
-      setWallMs(wallRef.current)
       if (pausedRef.current) return
       const sinceSound = now - audio.lastAboveRef.current
       const free = noMicRef.current || !listensRef.current
@@ -355,6 +354,19 @@ export function PracticeScreen({
     }, 100)
     return () => clearInterval(timer)
   }, [phase, index, audio.lastAboveRef])
+
+  // Whole-practice clock: runs from the session's start until it's complete (then freezes).
+  const sessionLive = run !== null && phase !== 'done'
+  useEffect(() => {
+    if (!sessionLive) return
+    const tick = (): void => {
+      if (sessionStartRef.current !== null)
+        setSessionMs(performance.now() - sessionStartRef.current)
+    }
+    tick()
+    const timer = setInterval(tick, 250)
+    return () => clearInterval(timer)
+  }, [sessionLive])
 
   // Main asks before the window closes while this is set.
   const activeSessionId = run && phase !== 'done' ? run.sessionId : null
@@ -645,41 +657,27 @@ export function PracticeScreen({
                     <PlayIcon className="translate-x-0.5" fill="currentColor" strokeWidth={0} />
                   )}
                 </button>
-                {untimed && phase === 'running' && (
-                  <Button size="lg" onClick={() => logAndAdvance('completed')}>
-                    <CheckIcon /> Done
-                  </Button>
-                )}
+                <Button
+                  size="lg"
+                  onClick={() => logAndAdvance('completed')}
+                  title="Mark this exercise as completed and move on"
+                >
+                  <CheckIcon /> Finish
+                </Button>
                 <Button variant="secondary" size="lg" onClick={() => logAndAdvance('skipped')}>
                   <SkipForwardIcon /> Skip
                 </Button>
 
                 <div className="ml-auto">
-                  {metronomeEnabled ? (
-                    <MetronomePanel
-                      bpmText={metronomeText}
-                      onBpmTextChange={changeMetronomeBpm}
-                      fromExercise={metronomeFromExercise}
-                      running={metronomeOn}
-                      onToggle={() => setMetronomeOn((on) => !on)}
-                      beat={beat}
-                    />
-                  ) : picked.bpm !== null ? (
-                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={400}
-                        value={bpmValue}
-                        onChange={(e) => setBpmText(e.target.value)}
-                        className="h-10 w-24 text-center font-mono text-lg"
-                        aria-label="BPM for this session"
-                      />
-                      BPM
-                    </label>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">No BPM</span>
-                  )}
+                  <MetronomePanel
+                    bpmText={metronomeText}
+                    onBpmTextChange={changeMetronomeBpm}
+                    fromExercise={metronomeFromExercise}
+                    enabled={metronomeEnabled}
+                    running={metronomeEnabled && metronomeOn}
+                    onToggle={() => setMetronomeOn((on) => !on)}
+                    beat={beat}
+                  />
                 </div>
               </footer>
             )}
@@ -705,10 +703,10 @@ export function PracticeScreen({
               <div className="flex items-baseline justify-between gap-3">
                 <h2 className="truncate text-xl font-semibold">{day.name}</h2>
                 <span className="shrink-0 font-mono text-[13px] text-muted-foreground">
-                  {phase === 'running' && (
-                    <span title="Time since you pressed play, including silence and pauses">
+                  {run && (
+                    <span title="Time since the session started, including silence, pauses and time between exercises">
                       <span className="text-foreground">
-                        {formatDuration(Math.floor(wallMs / 1000))}
+                        {formatDuration(Math.floor(sessionMs / 1000))}
                       </span>{' '}
                       elapsed ·{' '}
                     </span>

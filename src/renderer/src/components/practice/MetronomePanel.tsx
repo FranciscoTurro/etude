@@ -9,6 +9,8 @@ interface Props {
   onBpmTextChange: (text: string) => void
   /** true: the tempo is the exercise's (and gets logged); false: the metronome's own tempo. */
   fromExercise: boolean
+  /** Metronome sound turned off in settings: the BPM still edits, the dots just can't start it. */
+  enabled: boolean
   running: boolean
   onToggle: () => void
   /** Bumps on every click. */
@@ -22,7 +24,7 @@ const DOTS = 4
 
 /** Inline metronome: beat dots, BPM with ±5, and on/off. Sits in the practice card's footer. */
 export function MetronomePanel(props: Props): React.JSX.Element {
-  const { bpmText, fromExercise, running, beat } = props
+  const { bpmText, fromExercise, enabled, running, beat } = props
   const n = Number(bpmText)
   const valid = Number.isFinite(n) && n > 0
   const nudge = (d: number): void => props.onBpmTextChange(String(clampBpm((valid ? n : 100) + d)))
@@ -33,11 +35,14 @@ export function MetronomePanel(props: Props): React.JSX.Element {
       <button
         type="button"
         onClick={props.onToggle}
-        disabled={!valid}
-        className="flex items-center gap-2 rounded-full p-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
+        disabled={!valid || !enabled}
+        className={cn(
+          'flex items-center gap-2 rounded-full p-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+          !valid && 'opacity-50'
+        )}
         aria-label={running ? 'Stop metronome' : 'Start metronome'}
         aria-pressed={running}
-        title={running ? 'Stop metronome' : 'Start metronome'}
+        title={!enabled ? 'Metronome is off' : running ? 'Stop metronome' : 'Start metronome'}
       >
         {Array.from({ length: DOTS }, (_, i) =>
           i === lit ? (
